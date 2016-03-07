@@ -1,0 +1,54 @@
+---
+name: Rarefy, compute pairwise distances, and apply ordination
+type-imports:
+    - feature_table.artifact_types:FeatureTable
+    - feature_table.artifact_types:Frequency
+    - diversity.artifact_types:DistanceMatrix
+    - diversity.artifact_types:Phylogeny
+    - diversity.artifact_types:PCoAResults
+    - qiime.plugin:Str
+    - qiime.plugin:Int
+inputs:
+    feature_table: FeatureTable[Frequency]
+    phylogeny: Phylogeny
+    metric: Str
+    depth: Int
+outputs:
+    - distance_matrix: DistanceMatrix
+    - pcoa_results: PCoAResults
+---
+## Compute PCoA results from a feature table
+
+This workflow rarefies a feature table to an even sampling depth, computes all
+pairwise distances using the provided distance metric, and applies principal
+coordinate analysis.
+
+### Rarefy feature table
+
+```python
+>>> from feature_table import rarefy
+>>> rarefied_table = rarefy(feature_table, depth=depth)
+```
+
+### Compute pairwise distances
+
+```python
+>>> from diversity import beta_diversity
+>>> distance_matrix = beta_diversity(metric, rarefied_table, phylogeny=phylogeny)
+```
+
+### Apply principal coordinate analysis
+
+```python
+>>> import skbio.stats.ordination
+>>> pcoa_results = skbio.stats.ordination.pcoa(distance_matrix)
+```
+
+This is not how visualizations will be handled in QIIME 2 (track progress in
+[#21](https://github.com/biocore/qiime2/issues/21)), but just an illustration
+that the PCoA results computed here are reasonable:
+
+```python
+>>> %matplotlib inline
+>>> pcoa_results
+```

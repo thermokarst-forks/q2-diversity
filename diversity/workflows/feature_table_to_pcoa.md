@@ -43,12 +43,3 @@ coordinate analysis.
 >>> import skbio.stats.ordination
 >>> pcoa_results = skbio.stats.ordination.pcoa(distance_matrix)
 ```
-
-This is not how visualizations will be handled in QIIME 2 (track progress in
-[#21](https://github.com/biocore/qiime2/issues/21)), but just an illustration
-that the PCoA results computed here are reasonable:
-
-```python
->>> %matplotlib inline
->>> pcoa_results
-```

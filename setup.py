@@ -9,19 +9,19 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="diversity",
+    name="q2-diversity",
     # TODO stop duplicating version string
     version="0.0.0-dev",
     packages=find_packages(),
-    install_requires=['feature_table', 'scikit-bio >= 0.4.2, < 0.5.0',
-                      'qiime >= 2.0.0'],
-    package_data={'diversity': ['workflows/*md']},
+    install_requires=['q2-feature-table', 'scikit-bio >= 0.4.2, < 0.5.0',
+                      'qiime >= 2.0.0', 'q2-types'],
+    package_data={'q2_diversity': ['workflows/*md']},
     author="Greg Caporaso",
     author_email="gregcaporaso@gmail.com",
     description="Core diversity analyses.",
     license="BSD",
     url="http://www.qiime.org",
     entry_points={
-        'qiime.plugin': ['diversity=diversity.plugin_setup:plugin']
+        'qiime.plugin': ['q2-diversity=q2_diversity.plugin_setup:plugin']
     }
 )

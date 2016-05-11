@@ -1,11 +1,11 @@
 ---
 name: Rarefy, compute pairwise distances, and apply ordination
 type-imports:
-    - feature_table.artifact_types:FeatureTable
-    - feature_table.artifact_types:Frequency
-    - diversity.artifact_types:DistanceMatrix
-    - diversity.artifact_types:Phylogeny
-    - diversity.artifact_types:PCoAResults
+    - q2_types:FeatureTable
+    - q2_types:Frequency
+    - q2_types:DistanceMatrix
+    - q2_types:Phylogeny
+    - q2_types:PCoAResults
     - qiime.plugin:Str
     - qiime.plugin:Int
 inputs:
@@ -26,14 +26,14 @@ coordinate analysis.
 ### Rarefy feature table
 
 ```python
->>> from feature_table import rarefy
+>>> from q2_feature_table import rarefy
 >>> rarefied_table = rarefy(feature_table, depth=depth)
 ```
 
 ### Compute pairwise distances
 
 ```python
->>> from diversity import beta_diversity
+>>> from q2_diversity import beta_diversity
 >>> distance_matrix = beta_diversity(metric, rarefied_table, phylogeny=phylogeny)
 ```
 

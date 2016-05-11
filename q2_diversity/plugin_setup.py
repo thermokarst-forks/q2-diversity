@@ -8,21 +8,20 @@
 
 from qiime.plugin import Plugin, Str
 
-import diversity
-from diversity.artifact_types import DistanceMatrix, Phylogeny
-from feature_table.artifact_types import FeatureTable, Frequency
+import q2_diversity
+from q2_types import FeatureTable, Frequency, DistanceMatrix, Phylogeny
 
 plugin = Plugin(
     name='diversity',
-    version=diversity.__version__,
-    website='https://github.com/qiime2-plugins/diversity',
-    package='diversity'
+    version=q2_diversity.__version__,
+    website='https://github.com/qiime2-plugins/q2-diversity',
+    package='q2_diversity'
 )
 
 # TODO create decorator for promoting functions to workflows. This info would
 # be moved to the decorator calls.
 plugin.register_function(
-    function=diversity.beta_diversity,
+    function=q2_diversity.beta_diversity,
     # TODO require a uniform sampling effort FeatureTable when predicates exist
     inputs={'metric': Str,
             'feature_table': FeatureTable[Frequency],

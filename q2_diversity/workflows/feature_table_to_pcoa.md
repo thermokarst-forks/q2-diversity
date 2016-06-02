@@ -1,21 +1,26 @@
 ---
 name: Rarefy, compute pairwise distances, and apply ordination
-type-imports:
-    - q2_types:FeatureTable
-    - q2_types:Frequency
-    - q2_types:DistanceMatrix
-    - q2_types:Phylogeny
-    - q2_types:PCoAResults
-    - qiime.plugin:Str
-    - qiime.plugin:Int
 inputs:
-    feature_table: FeatureTable[Frequency]
-    phylogeny: Phylogeny
-    metric: Str
-    depth: Int
+    - feature_table:
+        - FeatureTable[Frequency]
+        - biom.Table
+    - phylogeny:
+        - Phylogeny
+        - skbio.TreeNode
+parameters:
+    - metric:
+        - Str
+        - str
+    - depth:
+        - Int
+        - int
 outputs:
-    - distance_matrix: DistanceMatrix
-    - pcoa_results: PCoAResults
+    - distance_matrix:
+        - DistanceMatrix
+        - skbio.DistanceMatrix
+    - pcoa_results:
+        - PCoAResults
+        - skbio.OrdinationResults
 ---
 ## Compute PCoA results from a feature table
 

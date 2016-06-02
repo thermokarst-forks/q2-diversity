@@ -23,10 +23,10 @@ plugin = Plugin(
 plugin.register_function(
     function=q2_diversity.beta_diversity,
     # TODO require a uniform sampling effort FeatureTable when predicates exist
-    inputs={'metric': Str,
-            'feature_table': FeatureTable[Frequency],
+    inputs={'feature_table': FeatureTable[Frequency],
             # TODO this is optional; how do we handle that here?
             'phylogeny': Phylogeny},
+    parameters={'metric': Str},
     outputs=[('distance_matrix', DistanceMatrix)],
     name='Beta diversity',
     doc="Let's compute some pairwise distances!"

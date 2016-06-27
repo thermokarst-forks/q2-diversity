@@ -1,5 +1,6 @@
 ---
 name: Rarefy, compute pairwise distances, and apply ordination
+description: This is a placeholder description for this method.
 inputs:
     - feature_table:
         - FeatureTable[Frequency]

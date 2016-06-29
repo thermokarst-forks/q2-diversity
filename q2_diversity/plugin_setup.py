@@ -6,30 +6,84 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from qiime.plugin import Plugin, Str
+from qiime.plugin import Plugin, Str, Properties, MetadataCategory, Choices
 
 import q2_diversity
-from q2_types import FeatureTable, Frequency, DistanceMatrix, Phylogeny
+import q2_diversity._alpha as alpha
+import q2_diversity._beta as beta
+from q2_types import (FeatureTable, Frequency, DistanceMatrix, Phylogeny,
+                      AlphaDiversity, PCoAResults)
+
 
 plugin = Plugin(
     name='diversity',
     version=q2_diversity.__version__,
-    website='https://github.com/qiime2-plugins/q2-diversity',
+    website='https://github.com/qiime2/q2-diversity',
     package='q2_diversity'
 )
 
-# TODO create decorator for promoting functions to methods. This info would
-# be moved to the decorator calls.
 plugin.methods.register_function(
-    function=q2_diversity.beta_diversity,
+    function=q2_diversity.beta_phylogenetic,
     # TODO require a uniform sampling effort FeatureTable when predicates exist
-    inputs={'feature_table': FeatureTable[Frequency],
-            # TODO this is optional; how do we handle that here?
+    inputs={'table': FeatureTable[Frequency],
             'phylogeny': Phylogeny},
-    parameters={'metric': Str},
-    outputs=[('distance_matrix', DistanceMatrix)],
-    name='Beta diversity',
-    description="Let's compute some pairwise distances!"
+    parameters={'metric': Str % Choices(beta.phylogenetic_metrics())},
+    outputs=[('distance_matrix', DistanceMatrix % Properties('phylogenetic'))],
+    name='Beta diversity (phylogenetic)',
+    description=("Computes a user-specified phylogenetic beta diversity metric"
+                 " for all pairs of samples in a feature table.")
 )
 
-plugin.methods.register_markdown('markdown/feature_table_to_pcoa.md')
+plugin.methods.register_function(
+    function=q2_diversity.beta,
+    # TODO require a uniform sampling effort FeatureTable when predicates exist
+    inputs={'table': FeatureTable[Frequency]},
+    parameters={'metric': Str % Choices(beta.non_phylogenetic_metrics())},
+    outputs=[('distance_matrix', DistanceMatrix)],
+    name='Beta diversity',
+    description=("Computes a user-specified beta diversity metric for all "
+                 "pairs of samples in a feature table.")
+)
+
+plugin.methods.register_function(
+    function=q2_diversity.alpha_phylogenetic,
+    # TODO require a uniform sampling effort FeatureTable when predicates exist
+    inputs={'table': FeatureTable[Frequency],
+            'phylogeny': Phylogeny},
+    parameters={'metric': Str % Choices(alpha.phylogenetic_metrics())},
+    outputs=[('alpha_diversity', AlphaDiversity % Properties('phylogenetic'))],
+    name='Alpha diversity (phylogenetic)',
+    description=("Computes a user-specified phylogenetic alpha diversity "
+                 "metric for all samples in a feature table.")
+)
+
+plugin.methods.register_function(
+    function=q2_diversity.alpha,
+    # TODO require a uniform sampling effort FeatureTable when predicates exist
+    inputs={'table': FeatureTable[Frequency]},
+    parameters={'metric': Str % Choices(alpha.non_phylogenetic_metrics())},
+    outputs=[('alpha_diversity', AlphaDiversity)],
+    name='Alpha diversity',
+    description=("Computes a user-specified alpha diversity metric for all "
+                 "samples in a feature table.")
+)
+
+plugin.methods.register_function(
+    function=q2_diversity.pcoa,
+    inputs={'distance_matrix': DistanceMatrix},
+    parameters={},
+    outputs=[('pcoa', PCoAResults)],
+    name='Principal Coordinate Analysis',
+    description=("Apply principal coordinate analysis.")
+)
+
+plugin.visualizers.register_function(
+    function=q2_diversity.alpha_compare,
+    inputs={'alpha_diversity': AlphaDiversity},
+    parameters={'metadata': MetadataCategory},
+    name='Alpha diversity comparisons',
+    description=("Visually and statistically compare groups of alpha diversity"
+                 " values.")
+)
+
+plugin.methods.register_markdown('markdown/core_metrics.md')

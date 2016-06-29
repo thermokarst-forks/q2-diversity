@@ -11,31 +11,47 @@ import skbio
 import skbio.diversity
 
 
-def beta_diversity(metric: str, feature_table: biom.Table,
-                   phylogeny: skbio.TreeNode=None) -> skbio.DistanceMatrix:
-    counts = feature_table.matrix_data.toarray().astype(int).T
-    sample_ids = feature_table.ids(axis='sample')
+# We should consider moving these functions to scikit-bio. They're part of
+# the private API here for now.
+def phylogenetic_metrics():
+    return {'unweighted_unifrac', 'weighted_unifrac'}
 
-    if metric in ('unweighted_unifrac', 'weighted_unifrac'):
-        if phylogeny is None:
-            raise TypeError(
-                "Phylogeny was not provided for phylogenetic metric %r"
-                % metric)
-        feature_ids = feature_table.ids(axis='observation')
-        return skbio.diversity.beta_diversity(
-            metric=metric,
-            counts=counts,
-            ids=sample_ids,
-            otu_ids=feature_ids,
-            tree=phylogeny
-        )
-    else:
-        if phylogeny is not None:
-            raise TypeError(
-                "Phylogeny was provided for non-phylogenetic metric %r"
-                % metric)
-        return skbio.diversity.beta_diversity(
-            metric=metric,
-            counts=counts,
-            ids=sample_ids
-        )
+
+def non_phylogenetic_metrics():
+    return {'cityblock', 'euclidean', 'seuclidean', 'sqeuclidean', 'cosine',
+            'correlation', 'hamming', 'jaccard', 'chebyshev', 'canberra',
+            'braycurtis', 'mahalanobis', 'yule', 'matching', 'dice',
+            'kulsinski', 'rogerstanimoto', 'russellrao', 'sokalmichener',
+            'sokalsneath', 'wminkowski'}
+
+
+def beta_phylogenetic(table: biom.Table, phylogeny: skbio.TreeNode,
+                      metric: str)-> skbio.DistanceMatrix:
+    if metric not in phylogenetic_metrics():
+        raise ValueError("Unknown phylogenetic metric: %s" % metric)
+
+    counts = table.matrix_data.toarray().astype(int).T
+    sample_ids = table.ids(axis='sample')
+    feature_ids = table.ids(axis='observation')
+
+    return skbio.diversity.beta_diversity(
+        metric=metric,
+        counts=counts,
+        ids=sample_ids,
+        otu_ids=feature_ids,
+        tree=phylogeny
+    )
+
+
+def beta(table: biom.Table, metric: str)-> skbio.DistanceMatrix:
+    if metric not in non_phylogenetic_metrics():
+        raise ValueError("Unknown metric: %s" % metric)
+
+    counts = table.matrix_data.toarray().astype(int).T
+    sample_ids = table.ids(axis='sample')
+
+    return skbio.diversity.beta_diversity(
+        metric=metric,
+        counts=counts,
+        ids=sample_ids
+    )

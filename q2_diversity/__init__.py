@@ -6,8 +6,11 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from ._beta import beta_diversity
+from ._alpha import alpha, alpha_phylogenetic, alpha_compare
+from ._beta import beta, beta_phylogenetic
+from ._ordination import pcoa
 
 __version__ = "0.0.0-dev"
 
-__all__ = ['beta_diversity']
+__all__ = ['beta', 'beta_phylogenetic', 'alpha', 'alpha_phylogenetic', 'pcoa',
+           'alpha_compare']

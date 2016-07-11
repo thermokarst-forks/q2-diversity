@@ -9,7 +9,7 @@ inputs:
         - Phylogeny
         - skbio.TreeNode
 parameters:
-    - depth:
+    - counts_per_sample:
         - Int
         - int
 outputs:
@@ -62,7 +62,7 @@ Principle coordinates analysis is subsequently applied to all pairwise distance 
 
 ```python
 >>> from q2_feature_table import rarefy
->>> rarefied_table = rarefy(table=table, depth=depth)
+>>> rarefied_table = rarefy(table=table, counts_per_sample=counts_per_sample)
 ```
 
 ### Compute alpha diversity metrics

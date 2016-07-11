@@ -24,8 +24,7 @@ plugin = Plugin(
 
 plugin.methods.register_function(
     function=q2_diversity.beta_phylogenetic,
-    # TODO require a uniform sampling effort FeatureTable when predicates exist
-    inputs={'table': FeatureTable[Frequency],
+    inputs={'table': FeatureTable[Frequency] % Properties('uniform-sampling'),
             'phylogeny': Phylogeny},
     parameters={'metric': Str % Choices(beta.phylogenetic_metrics())},
     outputs=[('distance_matrix', DistanceMatrix % Properties('phylogenetic'))],
@@ -36,8 +35,7 @@ plugin.methods.register_function(
 
 plugin.methods.register_function(
     function=q2_diversity.beta,
-    # TODO require a uniform sampling effort FeatureTable when predicates exist
-    inputs={'table': FeatureTable[Frequency]},
+    inputs={'table': FeatureTable[Frequency] % Properties('uniform-sampling')},
     parameters={'metric': Str % Choices(beta.non_phylogenetic_metrics())},
     outputs=[('distance_matrix', DistanceMatrix)],
     name='Beta diversity',
@@ -47,8 +45,7 @@ plugin.methods.register_function(
 
 plugin.methods.register_function(
     function=q2_diversity.alpha_phylogenetic,
-    # TODO require a uniform sampling effort FeatureTable when predicates exist
-    inputs={'table': FeatureTable[Frequency],
+    inputs={'table': FeatureTable[Frequency] % Properties('uniform-sampling'),
             'phylogeny': Phylogeny},
     parameters={'metric': Str % Choices(alpha.phylogenetic_metrics())},
     outputs=[('alpha_diversity', AlphaDiversity % Properties('phylogenetic'))],
@@ -59,8 +56,7 @@ plugin.methods.register_function(
 
 plugin.methods.register_function(
     function=q2_diversity.alpha,
-    # TODO require a uniform sampling effort FeatureTable when predicates exist
-    inputs={'table': FeatureTable[Frequency]},
+    inputs={'table': FeatureTable[Frequency] % Properties('uniform-sampling')},
     parameters={'metric': Str % Choices(alpha.non_phylogenetic_metrics())},
     outputs=[('alpha_diversity', AlphaDiversity)],
     name='Alpha diversity',

@@ -23,6 +23,6 @@ setup(
     license="BSD",
     url="http://www.qiime.org",
     entry_points={
-        'qiime.plugin': ['q2-diversity=q2_diversity.plugin_setup:plugin']
+        'qiime.plugins': ['q2-diversity=q2_diversity.plugin_setup:plugin']
     }
 )

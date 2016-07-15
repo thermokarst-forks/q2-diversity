@@ -11,7 +11,7 @@ from setuptools import setup, find_packages
 setup(
     name="q2-diversity",
     # TODO stop duplicating version string
-    version="0.0.0-dev",
+    version="0.0.1",
     packages=find_packages(),
     install_requires=['q2-feature-table', 'scikit-bio', 'qiime >= 2.0.0',
                       'q2-types', 'seaborn', 'statsmodels', 'scipy',

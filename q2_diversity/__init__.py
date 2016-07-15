@@ -10,7 +10,7 @@ from ._alpha import alpha, alpha_phylogenetic, alpha_compare
 from ._beta import beta, beta_phylogenetic
 from ._ordination import pcoa
 
-__version__ = "0.0.0-dev"
+__version__ = "0.0.1"
 
 __all__ = ['beta', 'beta_phylogenetic', 'alpha', 'alpha_phylogenetic', 'pcoa',
            'alpha_compare']

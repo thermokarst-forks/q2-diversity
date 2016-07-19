@@ -20,7 +20,7 @@ setup(
     author="Greg Caporaso",
     author_email="gregcaporaso@gmail.com",
     description="Core diversity analyses.",
-    license="BSD",
+    license='BSD-3-Clause',
     url="http://www.qiime.org",
     entry_points={
         'qiime.plugins': ['q2-diversity=q2_diversity.plugin_setup:plugin']

@@ -14,10 +14,10 @@ parameters:
         - int
 outputs:
     - faith_pd_vector:
-        - AlphaDiversity
+        - SampleData[AlphaDiversity]
         - pandas.Series
     - observed_otus_vector:
-        - AlphaDiversity
+        - SampleData[AlphaDiversity]
         - pandas.Series
     - unweighted_unifrac_distance_matrix:
         - DistanceMatrix

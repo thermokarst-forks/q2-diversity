@@ -12,7 +12,7 @@ import q2_diversity
 import q2_diversity._alpha as alpha
 import q2_diversity._beta as beta
 from q2_types import (FeatureTable, Frequency, DistanceMatrix, Phylogeny,
-                      AlphaDiversity, PCoAResults)
+                      AlphaDiversity, PCoAResults, SampleData)
 
 
 plugin = Plugin(
@@ -48,7 +48,8 @@ plugin.methods.register_function(
     inputs={'table': FeatureTable[Frequency] % Properties('uniform-sampling'),
             'phylogeny': Phylogeny},
     parameters={'metric': Str % Choices(alpha.phylogenetic_metrics())},
-    outputs=[('alpha_diversity', AlphaDiversity % Properties('phylogenetic'))],
+    outputs=[('alpha_diversity',
+              SampleData[AlphaDiversity] % Properties('phylogenetic'))],
     name='Alpha diversity (phylogenetic)',
     description=("Computes a user-specified phylogenetic alpha diversity "
                  "metric for all samples in a feature table.")
@@ -58,7 +59,7 @@ plugin.methods.register_function(
     function=q2_diversity.alpha,
     inputs={'table': FeatureTable[Frequency] % Properties('uniform-sampling')},
     parameters={'metric': Str % Choices(alpha.non_phylogenetic_metrics())},
-    outputs=[('alpha_diversity', AlphaDiversity)],
+    outputs=[('alpha_diversity', SampleData[AlphaDiversity])],
     name='Alpha diversity',
     description=("Computes a user-specified alpha diversity metric for all "
                  "samples in a feature table.")
@@ -75,7 +76,7 @@ plugin.methods.register_function(
 
 plugin.visualizers.register_function(
     function=q2_diversity.alpha_compare,
-    inputs={'alpha_diversity': AlphaDiversity},
+    inputs={'alpha_diversity': SampleData[AlphaDiversity]},
     parameters={'metadata': MetadataCategory},
     name='Alpha diversity comparisons',
     description=("Visually and statistically compare groups of alpha diversity"

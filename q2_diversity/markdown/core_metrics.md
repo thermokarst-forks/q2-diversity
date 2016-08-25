@@ -6,7 +6,7 @@ inputs:
         - FeatureTable[Frequency]
         - biom.Table
     - phylogeny:
-        - Phylogeny
+        - Phylogeny[Rooted]
         - skbio.TreeNode
 parameters:
     - counts_per_sample:

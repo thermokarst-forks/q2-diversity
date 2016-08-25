@@ -11,8 +11,8 @@ from qiime.plugin import Plugin, Str, Properties, MetadataCategory, Choices
 import q2_diversity
 import q2_diversity._alpha as alpha
 import q2_diversity._beta as beta
-from q2_types import (FeatureTable, Frequency, DistanceMatrix, Phylogeny,
-                      AlphaDiversity, PCoAResults, SampleData)
+from q2_types import (FeatureTable, Frequency, DistanceMatrix, AlphaDiversity,
+                      PCoAResults, SampleData, Phylogeny, Rooted)
 
 
 plugin = Plugin(
@@ -25,7 +25,7 @@ plugin = Plugin(
 plugin.methods.register_function(
     function=q2_diversity.beta_phylogenetic,
     inputs={'table': FeatureTable[Frequency] % Properties('uniform-sampling'),
-            'phylogeny': Phylogeny},
+            'phylogeny': Phylogeny[Rooted]},
     parameters={'metric': Str % Choices(beta.phylogenetic_metrics())},
     outputs=[('distance_matrix', DistanceMatrix % Properties('phylogenetic'))],
     name='Beta diversity (phylogenetic)',
@@ -46,7 +46,7 @@ plugin.methods.register_function(
 plugin.methods.register_function(
     function=q2_diversity.alpha_phylogenetic,
     inputs={'table': FeatureTable[Frequency] % Properties('uniform-sampling'),
-            'phylogeny': Phylogeny},
+            'phylogeny': Phylogeny[Rooted]},
     parameters={'metric': Str % Choices(alpha.phylogenetic_metrics())},
     outputs=[('alpha_diversity',
               SampleData[AlphaDiversity] % Properties('phylogenetic'))],

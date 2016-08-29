@@ -69,15 +69,17 @@ def alpha(table: biom.Table, metric: str) -> pd.Series:
 def alpha_compare(output_dir: str, alpha_diversity: pd.Series,
                   metadata: qiime.MetadataCategory) -> None:
     metadata = metadata.to_series()
-    data = pd.concat([alpha_diversity, metadata], axis=1)
+    filtered_metadata = metadata[alpha_diversity.index]
+    data = pd.concat([alpha_diversity, filtered_metadata], axis=1)
     names = []
     groups = []
-    for name, group in data.groupby(metadata.name):
-        names.append(name)
+    for name, group in data.groupby(filtered_metadata.name):
+        names.append('%s (n=%d)' % (name, len(group)))
         groups.append(list(group[alpha_diversity.name]))
     ax = sns.boxplot(data=groups)
     ax.set_xticklabels(names)
-    ax.set_ylabel(alpha_diversity.name)
+    ax.set_xlabel(metadata.name)
+    ax.set_ylabel(alpha_diversity.name.replace('_', ' ').title())
     ax.get_figure().savefig(os.path.join(output_dir, 'boxplots.png'))
     ax.get_figure().savefig(os.path.join(output_dir, 'boxplots.pdf'))
 

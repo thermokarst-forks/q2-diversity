@@ -10,61 +10,13 @@ import os.path
 import collections
 import urllib.parse
 
-import numpy as np
 import qiime
-import biom
 import skbio
 import skbio.diversity
 import numpy
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-
-
-# We should consider moving these functions to scikit-bio. They're part of
-# the private API here for now.
-def phylogenetic_metrics():
-    return {'unweighted_unifrac', 'weighted_unifrac'}
-
-
-def non_phylogenetic_metrics():
-    return {'cityblock', 'euclidean', 'seuclidean', 'sqeuclidean', 'cosine',
-            'correlation', 'hamming', 'jaccard', 'chebyshev', 'canberra',
-            'braycurtis', 'mahalanobis', 'yule', 'matching', 'dice',
-            'kulsinski', 'rogerstanimoto', 'russellrao', 'sokalmichener',
-            'sokalsneath', 'wminkowski'}
-
-
-def beta_phylogenetic(table: biom.Table, phylogeny: skbio.TreeNode,
-                      metric: str)-> skbio.DistanceMatrix:
-    if metric not in phylogenetic_metrics():
-        raise ValueError("Unknown phylogenetic metric: %s" % metric)
-
-    counts = table.matrix_data.toarray().astype(int).T
-    sample_ids = table.ids(axis='sample')
-    feature_ids = table.ids(axis='observation')
-
-    return skbio.diversity.beta_diversity(
-        metric=metric,
-        counts=counts,
-        ids=sample_ids,
-        otu_ids=feature_ids,
-        tree=phylogeny
-    )
-
-
-def beta(table: biom.Table, metric: str)-> skbio.DistanceMatrix:
-    if metric not in non_phylogenetic_metrics():
-        raise ValueError("Unknown metric: %s" % metric)
-
-    counts = table.matrix_data.toarray().astype(int).T
-    sample_ids = table.ids(axis='sample')
-
-    return skbio.diversity.beta_diversity(
-        metric=metric,
-        counts=counts,
-        ids=sample_ids
-    )
 
 
 def bioenv(output_dir: str, distance_matrix: skbio.DistanceMatrix,
@@ -148,7 +100,7 @@ def beta_group_significance(output_dir: str,
     # category, including those with empty strings as values.
     metadata = pd.to_numeric(metadata.to_series(), errors='ignore')
     metadata = metadata.loc[list(distance_matrix.ids)]
-    metadata = metadata.replace(r'', np.nan).dropna()
+    metadata = metadata.replace(r'', numpy.nan).dropna()
 
     # filter the distance matrix to exclude samples that were dropped from
     # the metadata, and keep track of how many samples survived the filtering

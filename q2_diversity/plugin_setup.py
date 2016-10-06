@@ -99,7 +99,7 @@ plugin.visualizers.register_function(
 )
 
 beta_group_significance_methods = \
-    list(q2_diversity._beta._method._beta_group_significance_fns)
+    list(q2_diversity._beta._visualizer._beta_group_significance_fns)
 
 plugin.visualizers.register_function(
     function=q2_diversity.beta_group_significance,

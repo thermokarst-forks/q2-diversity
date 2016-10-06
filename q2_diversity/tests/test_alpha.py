@@ -94,8 +94,8 @@ class AlphaCorrelationTests(unittest.TestCase):
             png_fp = os.path.join(output_dir, 'scatter-plot.png')
             self.assertTrue(os.path.exists(png_fp))
 
-            self.assertTrue('Spearman correlation' in open(index_fp).read())
-            self.assertTrue('Sample size</td><td>3</td>'
+            self.assertTrue('Spearman' in open(index_fp).read())
+            self.assertTrue('Sample size</th>\n                <td>3</td>'
                             in open(index_fp).read())
             self.assertFalse('Warning' in open(index_fp).read())
 
@@ -114,8 +114,8 @@ class AlphaCorrelationTests(unittest.TestCase):
             png_fp = os.path.join(output_dir, 'scatter-plot.png')
             self.assertTrue(os.path.exists(png_fp))
 
-            self.assertTrue('Pearson correlation' in open(index_fp).read())
-            self.assertTrue('Sample size</td><td>3</td>'
+            self.assertTrue('Pearson' in open(index_fp).read())
+            self.assertTrue('Sample size</th>\n                <td>3</td>'
                             in open(index_fp).read())
             self.assertFalse('Warning' in open(index_fp).read())
 
@@ -149,11 +149,10 @@ class AlphaCorrelationTests(unittest.TestCase):
             alpha_correlation(output_dir, alpha_div, md)
             index_fp = os.path.join(output_dir, 'index.html')
 
-            self.assertTrue('Sample size</td><td>2</td>'
+            self.assertTrue('Sample size</th>\n                <td>2</td>'
                             in open(index_fp).read())
-            self.assertTrue('Warning' in open(index_fp).read())
             self.assertTrue('contained 3 samples' in open(index_fp).read())
-            self.assertTrue('only 2 samples' in open(index_fp).read())
+            self.assertTrue('on 2 samples' in open(index_fp).read())
 
     def test_extra_metadata(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
@@ -166,7 +165,8 @@ class AlphaCorrelationTests(unittest.TestCase):
             alpha_correlation(output_dir, alpha_div, md)
             index_fp = os.path.join(output_dir, 'index.html')
             self.assertTrue(os.path.exists(index_fp))
-            self.assertTrue('Sample size</td><td>3' in open(index_fp).read())
+            self.assertTrue('Sample size</th>\n                <td>3</td>'
+                            in open(index_fp).read())
 
     def test_extra_alpha_div(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0, 8.0], name='alpha-div',
@@ -180,4 +180,5 @@ class AlphaCorrelationTests(unittest.TestCase):
             alpha_correlation(output_dir, alpha_div, md)
             index_fp = os.path.join(output_dir, 'index.html')
             self.assertTrue(os.path.exists(index_fp))
-            self.assertTrue('Sample size</td><td>3' in open(index_fp).read())
+            self.assertTrue('Sample size</th>\n                <td>3</td>'
+                            in open(index_fp).read())

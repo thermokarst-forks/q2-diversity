@@ -56,7 +56,3 @@ def beta(table: biom.Table, metric: str)-> skbio.DistanceMatrix:
         counts=counts,
         ids=sample_ids
     )
-
-
-_beta_group_significance_fns = {'permanova': skbio.stats.distance.permanova,
-                                'anosim': skbio.stats.distance.anosim}

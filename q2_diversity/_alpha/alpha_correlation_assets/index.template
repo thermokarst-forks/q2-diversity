@@ -24,15 +24,15 @@
         </div>
       </div>
 
+      #if @warning:
       <div class="row">
         <p class="alert alert-warning col-md-12">
-          #if @warning:
             Some samples were filtered because they were missing metadata values.
             <strong>The input contained @warning.initial samples but
             @warning.method was computed on @warning.filtered samples.</strong>
-          #end
         </p>
       </div>
+      #end
 
       <div class="row">
         <div class="col-lg-12">

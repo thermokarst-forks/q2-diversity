@@ -10,7 +10,7 @@ from qiime.plugin import (Plugin, Str, Properties, MetadataCategory, Choices,
                           Metadata, Int)
 
 import q2_diversity
-import q2_diversity._alpha as alpha
+from q2_diversity import _alpha as alpha
 import q2_diversity._beta as beta
 from q2_types import (FeatureTable, Frequency, DistanceMatrix, AlphaDiversity,
                       PCoAResults, SampleData, Phylogeny, Rooted)
@@ -76,9 +76,9 @@ plugin.methods.register_function(
 )
 
 plugin.visualizers.register_function(
-    function=q2_diversity.alpha_compare,
+    function=q2_diversity.alpha_group_significance,
     inputs={'alpha_diversity': SampleData[AlphaDiversity]},
-    parameters={'metadata': MetadataCategory},
+    parameters={'metadata': Metadata},
     name='Alpha diversity comparisons',
     description=("Visually and statistically compare groups of alpha diversity"
                  " values.")
@@ -113,7 +113,7 @@ plugin.visualizers.register_function(
 )
 
 alpha_correlation_methods = \
-    list(q2_diversity._alpha._alpha_correlation_fns)
+    list(q2_diversity._alpha._visualizer._alpha_correlation_fns)
 
 plugin.visualizers.register_function(
     function=q2_diversity.alpha_correlation,

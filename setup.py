@@ -22,7 +22,7 @@ setup(
                       'alpha_group_significance_assets/index.template',
                       'alpha_group_significance_assets/dst/*',
                       'alpha_correlation_assets/index.template',
-                      'alpha_correlation_assets/dst/*]},
+                      'alpha_correlation_assets/dst/*']},
     author="Greg Caporaso",
     author_email="gregcaporaso@gmail.com",
     description="Core diversity analyses.",

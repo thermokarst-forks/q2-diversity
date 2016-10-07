@@ -95,8 +95,8 @@ def alpha_group_significance(output_dir: str, alpha_diversity: pd.Series,
         else:
             filtered_categories.append(category)
 
-    TEMPLATES = pkg_resources.resource_filename('q2_diversity._alpha',
-                                                'assets')
+    TEMPLATES = pkg_resources.resource_filename(
+        'q2_diversity._alpha', 'alpha_group_significance_assets')
     index = TRender('index.template', path=TEMPLATES)
     rendered_index = index.render(
         {'categories': [quote(fn) for fn in filenames],
@@ -107,6 +107,11 @@ def alpha_group_significance(output_dir: str, alpha_diversity: pd.Series,
 
     shutil.copytree(os.path.join(TEMPLATES, 'dst'),
                     os.path.join(output_dir, 'dist'))
+
+    SHARED_ASSETS = pkg_resources.resource_filename('q2_diversity', 'assets')
+    for fn in ['bootstrap.min.css', 'd3-license.txt', 'qiime_logo_large.png']:
+        shutil.copy(os.path.join(SHARED_ASSETS, fn),
+                    os.path.join(output_dir, 'dist', fn))
 
 
 _alpha_correlation_fns = {'spearman': scipy.stats.spearmanr,
@@ -146,28 +151,28 @@ def alpha_correlation(output_dir: str,
     g.savefig(os.path.join(output_dir, 'scatter-plot.png'))
     g.savefig(os.path.join(output_dir, 'scatter-plot.pdf'))
 
-    index_fp = os.path.join(output_dir, 'index.html')
-    with open(index_fp, 'w') as fh:
-        fh.write('<html><body>')
-        if alpha_diversity.shape[0] != df.shape[0]:
-            fh.write("<b>Warning</b>: Some samples were filtered because they "
-                     "were missing metadata values.<br><b>The input "
-                     "contained %d samples but %s was computed on "
-                     "only %d samples.</b><p>"
-                     % (alpha_diversity.shape[0], method, df.shape[0]))
-        fh.write('<table border=1>\n')
-        fh.write(' <tr><td>Test</td><td>%s correlation</td></tr>\n' %
-                 method.title())
-        fh.write(' <tr><td>Test statistic</td><td>%1.4f</td></tr>\n' %
-                 correlation_result[0])
-        fh.write(' <tr><td>P-value</td><td>%1.4f</td></tr>\n' %
-                 correlation_result[1])
-        fh.write(' <tr><td>Sample size</td><td>%d</td></tr>\n' %
-                 df.shape[0])
-        fh.write('</table>')
-        fh.write('<p>\n')
-        fh.write('<a href="scatter-plot.pdf">\n')
-        fh.write(' <img src="scatter-plot.png">')
-        fh.write(' <p>Download as PDF</p>\n')
-        fh.write('</a>\n\n')
-        fh.write('</body></html>')
+    warning = None
+    if alpha_diversity.shape[0] != df.shape[0]:
+        warning = {'initial': alpha_diversity.shape[0],
+                   'method': method,
+                   'filtered': df.shape[0]}
+
+    TEMPLATES = pkg_resources.resource_filename(
+        'q2_diversity._alpha', 'alpha_correlation_assets')
+    index = TRender('index.template', path=TEMPLATES)
+    rendered_index = index.render({
+        'warning': warning,
+        'method': method.title(),
+        'test_stat': '%1.4f' % correlation_result[0],
+        'p_val': '%1.4f' % correlation_result[1],
+        'sample_size': df.shape[0],
+    })
+    with open(os.path.join(output_dir, 'index.html'), 'w') as fh:
+        fh.write(rendered_index)
+
+    SHARED_ASSETS = pkg_resources.resource_filename('q2_diversity', 'assets')
+    OUTPUT_ASSETS = os.path.join(output_dir, 'dist')
+    os.mkdir(OUTPUT_ASSETS)
+    for fn in ['bootstrap.min.css', 'qiime_logo_large.png']:
+        shutil.copy(os.path.join(SHARED_ASSETS, fn),
+                    os.path.join(OUTPUT_ASSETS, fn))

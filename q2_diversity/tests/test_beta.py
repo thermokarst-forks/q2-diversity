@@ -22,7 +22,7 @@ import qiime
 
 from q2_diversity import (beta, beta_phylogenetic, bioenv,
                           beta_group_significance)
-from q2_diversity._beta import _get_distance_boxplot_data
+from q2_diversity._beta._visualizer import _get_distance_boxplot_data
 
 
 class BetaDiversityTests(unittest.TestCase):

@@ -11,7 +11,7 @@ from qiime.plugin import (Plugin, Str, Properties, MetadataCategory, Choices,
 
 import q2_diversity
 from q2_diversity import _alpha as alpha
-import q2_diversity._beta as beta
+from q2_diversity import _beta as beta
 from q2_types import (FeatureTable, Frequency, DistanceMatrix, AlphaDiversity,
                       PCoAResults, SampleData, Phylogeny, Rooted)
 
@@ -99,7 +99,7 @@ plugin.visualizers.register_function(
 )
 
 beta_group_significance_methods = \
-    list(q2_diversity._beta._beta_group_significance_fns)
+    list(q2_diversity._beta._visualizer._beta_group_significance_fns)
 
 plugin.visualizers.register_function(
     function=q2_diversity.beta_group_significance,

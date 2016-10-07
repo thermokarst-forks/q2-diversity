@@ -45,7 +45,7 @@ export function addDownloadLinks(sel, svg) {
       const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(src)}`;
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', 'alpha-compare.svg');
+      link.setAttribute('download', 'alpha-correlation.svg');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

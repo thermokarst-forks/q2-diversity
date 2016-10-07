@@ -82,42 +82,38 @@ class AlphaCorrelationTests(unittest.TestCase):
     def test_spearman(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
-            pd.Series(['1.0', '2.0', '3.0'], name='value',
-                      index=['sample1', 'sample2', 'sample3']))
+        md = qiime.Metadata(
+            pd.DataFrame({'value': ['1.0', '2.0', '3.0']},
+                         index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:
             alpha_correlation(output_dir, alpha_div, md)
             index_fp = os.path.join(output_dir, 'index.html')
             self.assertTrue(os.path.exists(index_fp))
-            pdf_fp = os.path.join(output_dir, 'scatter-plot.pdf')
-            self.assertTrue(os.path.exists(pdf_fp))
-            png_fp = os.path.join(output_dir, 'scatter-plot.png')
-            self.assertTrue(os.path.exists(png_fp))
+            jsonp_fp = os.path.join(output_dir, 'category-value.jsonp')
+            self.assertTrue(os.path.exists(jsonp_fp))
 
-            self.assertTrue('Spearman' in open(index_fp).read())
-            self.assertTrue('Sample size</th>\n                <td>3</td>'
-                            in open(index_fp).read())
-            self.assertFalse('Warning' in open(index_fp).read())
+            self.assertTrue('Spearman' in open(jsonp_fp).read())
+            self.assertTrue('"sampleSize": 3' in open(jsonp_fp).read())
+            self.assertTrue('"data":' in open(jsonp_fp).read())
+            self.assertFalse('filtered' in open(jsonp_fp).read())
 
     def test_pearson(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
-            pd.Series(['1.0', '2.0', '3.0'], name='value',
-                      index=['sample1', 'sample2', 'sample3']))
+        md = qiime.Metadata(
+            pd.DataFrame({'value': ['1.0', '2.0', '3.0']},
+                         index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:
             alpha_correlation(output_dir, alpha_div, md, method='pearson')
             index_fp = os.path.join(output_dir, 'index.html')
             self.assertTrue(os.path.exists(index_fp))
-            pdf_fp = os.path.join(output_dir, 'scatter-plot.pdf')
-            self.assertTrue(os.path.exists(pdf_fp))
-            png_fp = os.path.join(output_dir, 'scatter-plot.png')
-            self.assertTrue(os.path.exists(png_fp))
+            jsonp_fp = os.path.join(output_dir, 'category-value.jsonp')
+            self.assertTrue(os.path.exists(jsonp_fp))
 
-            self.assertTrue('Pearson' in open(index_fp).read())
-            self.assertTrue('Sample size</th>\n                <td>3</td>'
-                            in open(index_fp).read())
-            self.assertFalse('Warning' in open(index_fp).read())
+            self.assertTrue('Pearson' in open(jsonp_fp).read())
+            self.assertTrue('"sampleSize": 3' in open(jsonp_fp).read())
+            self.assertTrue('"data":' in open(jsonp_fp).read())
+            self.assertFalse('filtered' in open(jsonp_fp).read())
 
     def test_bad_method(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
@@ -132,9 +128,9 @@ class AlphaCorrelationTests(unittest.TestCase):
     def test_bad_metadata(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
-            pd.Series(['a', 'b', 'c'], name='value',
-                      index=['sample1', 'sample2', 'sample3']))
+        md = qiime.Metadata(
+            pd.DataFrame({'value': ['a', 'b', 'c']},
+                         index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:
             with self.assertRaises(ValueError):
                 alpha_correlation(output_dir, alpha_div, md)
@@ -142,43 +138,46 @@ class AlphaCorrelationTests(unittest.TestCase):
     def test_nan_metadata(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
-            pd.Series(['1.0', '2.0', ''], name='value',
-                      index=['sample1', 'sample2', 'sample3']))
-        with tempfile.TemporaryDirectory() as output_dir:
-            alpha_correlation(output_dir, alpha_div, md)
-            index_fp = os.path.join(output_dir, 'index.html')
-
-            self.assertTrue('Sample size</th>\n                <td>2</td>'
-                            in open(index_fp).read())
-            self.assertTrue('contained 3 samples' in open(index_fp).read())
-            self.assertTrue('on 2 samples' in open(index_fp).read())
-
-    def test_extra_metadata(self):
-        alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
-                              index=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
-            pd.Series(['1.0', '2.0', '3.0', '4.0'], name='value',
-                      index=['sample1', 'sample2', 'sample3', 'sample4']))
-
+        md = qiime.Metadata(
+            pd.DataFrame({'value': ['1.0', '2.0', '']},
+                         index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:
             alpha_correlation(output_dir, alpha_div, md)
             index_fp = os.path.join(output_dir, 'index.html')
             self.assertTrue(os.path.exists(index_fp))
-            self.assertTrue('Sample size</th>\n                <td>3</td>'
-                            in open(index_fp).read())
+            jsonp_fp = os.path.join(output_dir, 'category-value.jsonp')
+            self.assertTrue(os.path.exists(jsonp_fp))
+
+            self.assertTrue('"filtered": 2' in open(jsonp_fp).read())
+            self.assertTrue('"initial": 3' in open(jsonp_fp).read())
+
+    def test_extra_metadata(self):
+        alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
+                              index=['sample1', 'sample2', 'sample3'])
+        md = qiime.Metadata(
+            pd.DataFrame({'value': ['1.0', '2.0', '3.0', '4.0']},
+                         index=['sample1', 'sample2', 'sample3', 'sample4']))
+        with tempfile.TemporaryDirectory() as output_dir:
+            alpha_correlation(output_dir, alpha_div, md)
+            index_fp = os.path.join(output_dir, 'index.html')
+            self.assertTrue(os.path.exists(index_fp))
+            jsonp_fp = os.path.join(output_dir, 'category-value.jsonp')
+            self.assertTrue(os.path.exists(jsonp_fp))
+
+            self.assertTrue('"sampleSize": 3' in open(jsonp_fp).read())
 
     def test_extra_alpha_div(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0, 8.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3',
                                      'sample4'])
-        md = qiime.MetadataCategory(
-            pd.Series(['1.0', '2.0', '3.0'], name='value',
-                      index=['sample1', 'sample2', 'sample3']))
-
+        md = qiime.Metadata(
+            pd.DataFrame({'value': ['1.0', '2.0', '3.0']},
+                         index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:
             alpha_correlation(output_dir, alpha_div, md)
             index_fp = os.path.join(output_dir, 'index.html')
             self.assertTrue(os.path.exists(index_fp))
-            self.assertTrue('Sample size</th>\n                <td>3</td>'
-                            in open(index_fp).read())
+            jsonp_fp = os.path.join(output_dir, 'category-value.jsonp')
+            self.assertTrue(os.path.exists(jsonp_fp))
+
+            self.assertTrue('"sampleSize": 3' in open(jsonp_fp).read())

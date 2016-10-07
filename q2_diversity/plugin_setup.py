@@ -119,7 +119,7 @@ plugin.visualizers.register_function(
     function=q2_diversity.alpha_correlation,
     inputs={'alpha_diversity': SampleData[AlphaDiversity]},
     parameters={'method': Str % Choices(alpha_correlation_methods),
-                'metadata': MetadataCategory},
+                'metadata': Metadata},
     name='Alpha diversity correlation',
     description=('Determine whether numeric sample metadata category is '
                  'correlated with alpha diversity.')

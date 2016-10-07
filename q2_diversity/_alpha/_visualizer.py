@@ -15,7 +15,6 @@ from urllib.parse import quote
 import scipy
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import qiime
 from statsmodels.sandbox.stats.multicomp import multipletests
 from trender import TRender
@@ -120,7 +119,7 @@ _alpha_correlation_fns = {'spearman': scipy.stats.spearmanr,
 
 def alpha_correlation(output_dir: str,
                       alpha_diversity: pd.Series,
-                      metadata: qiime.MetadataCategory,
+                      metadata: qiime.Metadata,
                       method: str='spearman') -> None:
     try:
         alpha_correlation_fn = _alpha_correlation_fns[method]
@@ -128,51 +127,70 @@ def alpha_correlation(output_dir: str,
         raise ValueError('Unknown alpha correlation method %s. The available '
                          'options are %s.' %
                          (method, ', '.join(_alpha_correlation_fns.keys())))
+    metadata_df = metadata.to_dataframe()
+    metadata_df = metadata_df.apply(pd.to_numeric, errors='ignore')
+    pre_filtered_cols = set(metadata_df.columns)
+    metadata_df = metadata_df.select_dtypes(include=[np.number])
+    post_filtered_cols = set(metadata_df.columns)
+    filtered_categories = list(pre_filtered_cols - post_filtered_cols)
 
-    # Cast metadata to numeric.
-    try:
-        metadata = pd.to_numeric(metadata.to_series())
-    except ValueError:
-        raise ValueError('Non-numeric data is present in metadata category %s.'
-                         % metadata.to_series().name)
+    categories = metadata_df.columns
 
-    # create a dataframe containing the data to be correlated, and drop
-    # any samples that have no data in either column
-    df = pd.concat([metadata, alpha_diversity], axis=1)
-    df.dropna(inplace=True)
+    if len(categories) == 0:
+        raise ValueError('Only non-numeric data is present in metadata file.')
 
-    # compute correlation
-    correlation_result = alpha_correlation_fn(df[metadata.name],
-                                              df[alpha_diversity.name])
+    filenames = []
+    for category in categories:
+        metadata_category = metadata_df[category]
+        metadata_category = metadata_category[alpha_diversity.index]
+        metadata_category = metadata_category.replace(r'', np.nan).dropna()
 
-    # generate a scatter plot
-    g = sns.lmplot(x=metadata.name, y=alpha_diversity.name, data=df,
-                   fit_reg=False)
-    g.savefig(os.path.join(output_dir, 'scatter-plot.png'))
-    g.savefig(os.path.join(output_dir, 'scatter-plot.pdf'))
+        # create a dataframe containing the data to be correlated, and drop
+        # any samples that have no data in either column
+        df = pd.concat([metadata_category, alpha_diversity], axis=1,
+                       join='inner')
 
-    warning = None
-    if alpha_diversity.shape[0] != df.shape[0]:
-        warning = {'initial': alpha_diversity.shape[0],
-                   'method': method,
-                   'filtered': df.shape[0]}
+        # compute correlation
+        correlation_result = alpha_correlation_fn(df[metadata_category.name],
+                                                  df[alpha_diversity.name])
+
+        warning = None
+        if alpha_diversity.shape[0] != df.shape[0]:
+            warning = {'initial': alpha_diversity.shape[0],
+                       'method': method,
+                       'filtered': df.shape[0]}
+
+        escaped_category = quote(category)
+        filename = 'category-%s.jsonp' % escaped_category
+        filenames.append(filename)
+
+        with open(os.path.join(output_dir, filename), 'w') as fh:
+            fh.write("load_data('%s'," % category)
+            df.to_json(fh, orient='split')
+            fh.write(",")
+            json.dump(warning, fh)
+            fh.write(",")
+            json.dump({
+                'method': method.title(),
+                'testStat': '%1.4f' % correlation_result[0],
+                'pVal': '%1.4f' % correlation_result[1],
+                'sampleSize': df.shape[0]}, fh)
+            fh.write(");")
 
     TEMPLATES = pkg_resources.resource_filename(
         'q2_diversity._alpha', 'alpha_correlation_assets')
     index = TRender('index.template', path=TEMPLATES)
     rendered_index = index.render({
-        'warning': warning,
-        'method': method.title(),
-        'test_stat': '%1.4f' % correlation_result[0],
-        'p_val': '%1.4f' % correlation_result[1],
-        'sample_size': df.shape[0],
-    })
+        'categories': filenames,
+        'filtered_categories': filtered_categories})
     with open(os.path.join(output_dir, 'index.html'), 'w') as fh:
         fh.write(rendered_index)
 
+    shutil.copytree(os.path.join(TEMPLATES, 'dst'),
+                    os.path.join(output_dir, 'dist'))
+
     SHARED_ASSETS = pkg_resources.resource_filename('q2_diversity', 'assets')
     OUTPUT_ASSETS = os.path.join(output_dir, 'dist')
-    os.mkdir(OUTPUT_ASSETS)
     for fn in ['bootstrap.min.css', 'qiime_logo_large.png']:
         shutil.copy(os.path.join(SHARED_ASSETS, fn),
                     os.path.join(OUTPUT_ASSETS, fn))

@@ -25,24 +25,25 @@
         </div>
       </div>
 
+      #if @filtered_numeric_categories:
       <div class="row">
         <p class="alert alert-warning col-md-12">
-          #if @filtered_numeric_categories:
           The following metadata categories have been omitted because the
           metadata was numerical, not categorical:
           <strong>@filtered_numeric_categories</strong>
-          #end
-          #if @filtered_categories:
-            #if @filtered_numeric_categories:
-            <br><br>
-            #end
+        </p>
+      </div>
+      #end
+      #if @filtered_categories:
+      <div class="row">
+        <p class="alert alert-warning col-md-12">
           The following metadata categories have been omitted because the number
           of groups was equal to the number of samples, or there was only a single
           category:
           <strong>@filtered_categories</strong>
-          #end
         </p>
       </div>
+      #end
       <div class="row">
         <p class="alert alert-warning col-md-12" id="filtered-samples"></p>
       </div>

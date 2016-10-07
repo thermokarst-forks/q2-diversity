@@ -27,9 +27,12 @@ def alpha_group_significance(output_dir: str, alpha_diversity: pd.Series,
     pre_filtered_cols = set(metadata_df.columns)
     metadata_df = metadata_df.select_dtypes(exclude=[np.number])
     post_filtered_cols = set(metadata_df.columns)
-    filtered_numeric_categories = list(pre_filtered_cols - post_filtered_cols)
+    filtered_numeric_categories = pre_filtered_cols - post_filtered_cols
 
     categories = metadata_df.columns
+
+    if len(categories) == 0:
+        raise ValueError('Only numeric data is present in metadata file.')
 
     filenames = []
     filtered_categories = []
@@ -132,7 +135,7 @@ def alpha_correlation(output_dir: str,
     pre_filtered_cols = set(metadata_df.columns)
     metadata_df = metadata_df.select_dtypes(include=[np.number])
     post_filtered_cols = set(metadata_df.columns)
-    filtered_categories = list(pre_filtered_cols - post_filtered_cols)
+    filtered_categories = pre_filtered_cols - post_filtered_cols
 
     categories = metadata_df.columns
 
@@ -143,7 +146,7 @@ def alpha_correlation(output_dir: str,
     for category in categories:
         metadata_category = metadata_df[category]
         metadata_category = metadata_category[alpha_diversity.index]
-        metadata_category = metadata_category.replace(r'', np.nan).dropna()
+        metadata_category = metadata_category.dropna()
 
         # create a dataframe containing the data to be correlated, and drop
         # any samples that have no data in either column
@@ -157,7 +160,7 @@ def alpha_correlation(output_dir: str,
         warning = None
         if alpha_diversity.shape[0] != df.shape[0]:
             warning = {'initial': alpha_diversity.shape[0],
-                       'method': method,
+                       'method': method.title(),
                        'filtered': df.shape[0]}
 
         escaped_category = quote(category)
@@ -181,8 +184,8 @@ def alpha_correlation(output_dir: str,
         'q2_diversity._alpha', 'alpha_correlation_assets')
     index = TRender('index.template', path=TEMPLATES)
     rendered_index = index.render({
-        'categories': filenames,
-        'filtered_categories': filtered_categories})
+        'categories': [quote(fn) for fn in filenames],
+        'filtered_categories': ', '.join(filtered_categories)})
     with open(os.path.join(output_dir, 'index.html'), 'w') as fh:
         fh.write(rendered_index)
 

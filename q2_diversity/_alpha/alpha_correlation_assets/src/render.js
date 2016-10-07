@@ -51,14 +51,14 @@ export function warnings(body, data) {
     return;
   }
 
-  const { filtered: { initial, filtered } } = data;
+  const { filtered: { initial, filtered, method } } = data;
   if (initial !== filtered) {
     select('#filtered-samples')
       .style('display', null)
       .html(`Some samples were filtered from the input alpha diversity data
         because they were missing metadata values.<strong>The input alpha
-        diversity data contained ${initial} samples, but the analysis was run
-        on only ${filtered} samples.</strong>`);
+        diversity data contained ${initial} samples, but ${method} correlation
+        was computed on only ${filtered} samples.</strong>`);
   } else {
     select('#filtered-samples').style('display', 'none').html(null);
   }

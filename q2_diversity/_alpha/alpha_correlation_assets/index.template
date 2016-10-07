@@ -25,6 +25,16 @@
         </div>
       </div>
 
+      #if @filtered_categories:
+      <div class="row">
+        <p class="alert alert-warning col-md-12">
+          The following metadata categories have been omitted because the
+          metadata was categorical, not numerical:
+          <strong>@filtered_categories</strong>
+        </p>
+      </div>
+      #end
+
       <div class="row">
         <p class="alert alert-warning col-md-12" id="filtered-samples"></p>
       </div>

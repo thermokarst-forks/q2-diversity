@@ -1,9 +1,9 @@
 export default function setupData(data) {
   const [xAxisLabel, yAxisLabel] = data.data.columns;
 
-  let minX = 0;
+  let minX = Infinity;
   let maxX = 0;
-  let minY = 0;
+  let minY = Infinity;
   let maxY = 0;
 
   data.data.data.forEach((d) => {

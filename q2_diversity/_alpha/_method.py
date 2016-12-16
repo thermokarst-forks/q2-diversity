@@ -36,12 +36,17 @@ def alpha_phylogenetic(table: biom.Table, phylogeny: skbio.TreeNode,
     sample_ids = table.ids(axis='sample')
     feature_ids = table.ids(axis='observation')
 
-    result = skbio.diversity.alpha_diversity(
-                metric=metric,
-                counts=counts,
-                ids=sample_ids,
-                otu_ids=feature_ids,
-                tree=phylogeny)
+    try:
+        result = skbio.diversity.alpha_diversity(metric=metric,
+                                                 counts=counts,
+                                                 ids=sample_ids,
+                                                 otu_ids=feature_ids,
+                                                 tree=phylogeny)
+    except skbio.tree.MissingNodeError as e:
+        message = str(e).replace('otu_ids', 'feature_ids')
+        message = message.replace('tree', 'phylogeny')
+        raise skbio.tree.MissingNodeError(message)
+
     result.name = metric
     return result
 

@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -15,7 +15,7 @@ from urllib.parse import quote
 import scipy
 import numpy as np
 import pandas as pd
-import qiime
+import qiime2
 from statsmodels.sandbox.stats.multicomp import multipletests
 import q2templates
 
@@ -24,7 +24,7 @@ TEMPLATES = pkg_resources.resource_filename('q2_diversity', '_alpha')
 
 
 def alpha_group_significance(output_dir: str, alpha_diversity: pd.Series,
-                             metadata: qiime.Metadata) -> None:
+                             metadata: qiime2.Metadata) -> None:
     metadata_df = metadata.to_dataframe()
     metadata_df = metadata_df.apply(pd.to_numeric, errors='ignore')
     pre_filtered_cols = set(metadata_df.columns)
@@ -119,7 +119,7 @@ _alpha_correlation_fns = {'spearman': scipy.stats.spearmanr,
 
 def alpha_correlation(output_dir: str,
                       alpha_diversity: pd.Series,
-                      metadata: qiime.Metadata,
+                      metadata: qiime2.Metadata,
                       method: str='spearman') -> None:
     try:
         alpha_correlation_fn = _alpha_correlation_fns[method]

@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -18,7 +18,7 @@ import numpy as np
 import numpy.testing as npt
 from biom.table import Table
 import pandas as pd
-import qiime
+import qiime2
 
 from q2_diversity import (beta, beta_phylogenetic, bioenv,
                           beta_group_significance)
@@ -115,7 +115,7 @@ class BioenvTests(unittest.TestCase):
                                    [0.25, 0.00, 0.00],
                                    [0.25, 0.00, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3'])
-        md = qiime.Metadata(
+        md = qiime2.Metadata(
             pd.DataFrame([['1.0', 'a'], ['2.0', 'b'], ['3.0', 'c']],
                          index=['sample1', 'sample2', 'sample3'],
                          columns=['metadata1', 'metadata2']))
@@ -135,7 +135,7 @@ class BioenvTests(unittest.TestCase):
                                    [0.25, 0.00, 0.00],
                                    [0.25, 0.00, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3'])
-        md = qiime.Metadata(
+        md = qiime2.Metadata(
             pd.DataFrame([['1.0', '2.0'], ['2.0', ''], ['3.0', '42.0']],
                          index=['sample1', 'sample2', 'sample3'],
                          columns=['metadata1', 'metadata2']))
@@ -154,7 +154,7 @@ class BioenvTests(unittest.TestCase):
                                    [0.25, 0.00, 0.00],
                                    [0.25, 0.00, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3'])
-        md = qiime.Metadata(
+        md = qiime2.Metadata(
             pd.DataFrame([['1.0', 'a'], ['2.0', 'b'], ['3.0', 'c'],
                           ['4.0', 'd']],
                          index=['sample1', 'sample2', 'sample3', 'sample4'],
@@ -175,7 +175,7 @@ class BioenvTests(unittest.TestCase):
                                    [0.25, 0.00, 0.00],
                                    [0.25, 0.00, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3'])
-        md = qiime.Metadata(
+        md = qiime2.Metadata(
             pd.DataFrame([['1.0', '2.0'], ['2.0', '2.0'], ['3.0', '2.0']],
                          index=['sample1', 'sample2', 'sample3'],
                          columns=['metadata1', 'metadata2']))
@@ -197,7 +197,7 @@ class BetaGroupSignificanceTests(unittest.TestCase):
                                    [0.25, 0.00, 0.00],
                                    [0.25, 0.00, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
+        md = qiime2.MetadataCategory(
             pd.Series(['a', 'b', 'b'], name='a or b',
                       index=['sample1', 'sample2', 'sample3']))
 
@@ -227,7 +227,7 @@ class BetaGroupSignificanceTests(unittest.TestCase):
                                    [0.25, 0.00, 0.00],
                                    [0.25, 0.00, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
+        md = qiime2.MetadataCategory(
             pd.Series(['a', 'b', 'b'], name='a or b',
                       index=['sample1', 'sample2', 'sample3']))
 
@@ -259,7 +259,7 @@ class BetaGroupSignificanceTests(unittest.TestCase):
                                    [0.25, 0.00, 0.00],
                                    [0.25, 0.00, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
+        md = qiime2.MetadataCategory(
             pd.Series(['a', 'b', 'b'], name='a or b',
                       index=['sample1', 'sample2', 'sample3']))
 
@@ -273,7 +273,7 @@ class BetaGroupSignificanceTests(unittest.TestCase):
                                    [0.25, 0.00, 0.00],
                                    [0.25, 0.00, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
+        md = qiime2.MetadataCategory(
             pd.Series(['a', 'b', 'b'], name='a or b',
                       index=['sample1', 'sample2', 'sample3']))
 
@@ -288,7 +288,7 @@ class BetaGroupSignificanceTests(unittest.TestCase):
                                    [0.66, 0.66, 0.66, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3',
                                        'sample4'])
-        md = qiime.MetadataCategory(
+        md = qiime2.MetadataCategory(
             pd.Series(['1.0', '2.0', '2.0', ''], name='a or b',
                       index=['sample1', 'sample2', 'sample3', 'sample4']))
         with tempfile.TemporaryDirectory() as output_dir:
@@ -303,7 +303,7 @@ class BetaGroupSignificanceTests(unittest.TestCase):
                                    [0.66, 0.66, 0.66, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3',
                                        'sample4'])
-        md = qiime.MetadataCategory(
+        md = qiime2.MetadataCategory(
             pd.Series(['a', 'b', 'b', ''], name='a or b',
                       index=['sample1', 'sample2', 'sample3', 'sample4']))
         with tempfile.TemporaryDirectory() as output_dir:
@@ -316,7 +316,7 @@ class BetaGroupSignificanceTests(unittest.TestCase):
                                    [0.25, 0.00, 0.00],
                                    [0.25, 0.00, 0.00]],
                                   ids=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
+        md = qiime2.MetadataCategory(
             pd.Series(['a', 'b', 'b', 'c'], name='a or b',
                       index=['sample1', 'sample2', 'sample3', 'sample4']))
 
@@ -388,6 +388,7 @@ class BetaGroupSignificanceTests(unittest.TestCase):
         exp_labels = ['g1 (n=1)', 'g3 (n=2)', 'g2 (n=4)']
         self.assertEqual(obs[0], exp_data)
         self.assertEqual(obs[1], exp_labels)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -10,13 +10,12 @@ from setuptools import setup, find_packages
 
 setup(
     name="q2-diversity",
-    # TODO stop duplicating version string
-    version="0.0.7.dev0",
+    version="2017.2.0.dev0",
     packages=find_packages(),
-    install_requires=['qiime >= 2.0.6', 'q2-feature-table >= 0.0.6',
-                      'q2-types >= 0.0.6', 'scikit-bio', 'seaborn',
-                      'statsmodels', 'scipy', 'numpy', 'pandas',
-                      'biom-format >= 2.1.5, < 2.2.0', 'q2templates >= 0.0.6'],
+    install_requires=['qiime2 == 2017.2.*', 'q2-feature-table == 2017.2.*',
+                      'q2-types == 2017.2.*', 'q2templates == 2017.2.*',
+                      'scikit-bio', 'seaborn', 'statsmodels', 'scipy', 'numpy',
+                      'pandas', 'biom-format >= 2.1.5, < 2.2.0'],
     package_data={'q2_diversity._alpha': [
                       'alpha_group_significance_assets/index.html',
                       'alpha_group_significance_assets/dst/*',
@@ -30,8 +29,8 @@ setup(
     author_email="gregcaporaso@gmail.com",
     description="Core diversity analyses.",
     license='BSD-3-Clause',
-    url="http://www.qiime.org",
+    url="https://qiime2.org",
     entry_points={
-        'qiime.plugins': ['q2-diversity=q2_diversity.plugin_setup:plugin']
+        'qiime2.plugins': ['q2-diversity=q2_diversity.plugin_setup:plugin']
     }
 )

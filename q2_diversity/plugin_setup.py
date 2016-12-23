@@ -1,19 +1,22 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-from qiime.plugin import (Plugin, Str, Properties, MetadataCategory, Choices,
-                          Metadata, Int)
+from qiime2.plugin import (Plugin, Str, Properties, MetadataCategory, Choices,
+                           Metadata, Int)
 
 import q2_diversity
 from q2_diversity import _alpha as alpha
 from q2_diversity import _beta as beta
-from q2_types import (FeatureTable, Frequency, DistanceMatrix, AlphaDiversity,
-                      PCoAResults, SampleData, Phylogeny, Rooted)
+from q2_types.feature_table import FeatureTable, Frequency
+from q2_types.distance_matrix import DistanceMatrix
+from q2_types.sample_data import AlphaDiversity, SampleData
+from q2_types.tree import Phylogeny, Rooted
+from q2_types.ordination import PCoAResults
 
 
 plugin = Plugin(

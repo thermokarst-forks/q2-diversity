@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -11,7 +11,7 @@ import collections
 import urllib.parse
 import pkg_resources
 
-import qiime
+import qiime2
 import skbio
 import skbio.diversity
 import numpy
@@ -25,7 +25,7 @@ TEMPLATES = pkg_resources.resource_filename('q2_diversity', '_beta')
 
 
 def bioenv(output_dir: str, distance_matrix: skbio.DistanceMatrix,
-           metadata: qiime.Metadata) -> None:
+           metadata: qiime2.Metadata) -> None:
     # convert metadata to numeric values where applicable, drop the non-numeric
     # values, and then drop samples that contain NaNs
     df = metadata.to_dataframe()
@@ -95,7 +95,7 @@ def _get_distance_boxplot_data(distance_matrix, group_id, groupings):
 
 def beta_group_significance(output_dir: str,
                             distance_matrix: skbio.DistanceMatrix,
-                            metadata: qiime.MetadataCategory,
+                            metadata: qiime2.MetadataCategory,
                             method: str='permanova',
                             permutations: int=999) -> None:
     try:

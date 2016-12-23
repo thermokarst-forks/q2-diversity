@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------
-# Copyright (c) 2016--, QIIME development team.
+# Copyright (c) 2016-2017, QIIME 2 development team.
 #
 # Distributed under the terms of the Modified BSD License.
 #
@@ -13,7 +13,7 @@ import unittest
 import io
 import biom
 import skbio
-import qiime
+import qiime2
 import numpy as np
 import pandas as pd
 import pandas.util.testing as pdt
@@ -96,7 +96,7 @@ class AlphaCorrelationTests(unittest.TestCase):
     def test_spearman(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3'])
-        md = qiime.Metadata(
+        md = qiime2.Metadata(
             pd.DataFrame({'value': ['1.0', '2.0', '3.0']},
                          index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:
@@ -114,7 +114,7 @@ class AlphaCorrelationTests(unittest.TestCase):
     def test_pearson(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3'])
-        md = qiime.Metadata(
+        md = qiime2.Metadata(
             pd.DataFrame({'value': ['1.0', '2.0', '3.0']},
                          index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:
@@ -132,7 +132,7 @@ class AlphaCorrelationTests(unittest.TestCase):
     def test_bad_method(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3'])
-        md = qiime.MetadataCategory(
+        md = qiime2.MetadataCategory(
             pd.Series(['1.0', '2.0', '3.0'], name='value',
                       index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:
@@ -142,7 +142,7 @@ class AlphaCorrelationTests(unittest.TestCase):
     def test_bad_metadata(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3'])
-        md = qiime.Metadata(
+        md = qiime2.Metadata(
             pd.DataFrame({'value': ['a', 'b', 'c']},
                          index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:
@@ -152,7 +152,7 @@ class AlphaCorrelationTests(unittest.TestCase):
     def test_nan_metadata(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3'])
-        md = qiime.Metadata(
+        md = qiime2.Metadata(
             pd.DataFrame({'value': ['1.0', '2.0', '']},
                          index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:
@@ -168,7 +168,7 @@ class AlphaCorrelationTests(unittest.TestCase):
     def test_extra_metadata(self):
         alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3'])
-        md = qiime.Metadata(
+        md = qiime2.Metadata(
             pd.DataFrame({'value': ['1.0', '2.0', '3.0', '4.0']},
                          index=['sample1', 'sample2', 'sample3', 'sample4']))
         with tempfile.TemporaryDirectory() as output_dir:
@@ -184,7 +184,7 @@ class AlphaCorrelationTests(unittest.TestCase):
         alpha_div = pd.Series([2.0, 4.0, 6.0, 8.0], name='alpha-div',
                               index=['sample1', 'sample2', 'sample3',
                                      'sample4'])
-        md = qiime.Metadata(
+        md = qiime2.Metadata(
             pd.DataFrame({'value': ['1.0', '2.0', '3.0']},
                          index=['sample1', 'sample2', 'sample3']))
         with tempfile.TemporaryDirectory() as output_dir:

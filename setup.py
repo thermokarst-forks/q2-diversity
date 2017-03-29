@@ -40,5 +40,5 @@ setup(
     entry_points={
         'qiime2.plugins': ['q2-diversity=q2_diversity.plugin_setup:plugin']
     },
-    zip_safe=True,
+    zip_safe=False,
 )

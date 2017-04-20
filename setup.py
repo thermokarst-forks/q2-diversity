@@ -8,18 +8,13 @@
 
 from setuptools import setup, find_packages
 
+import versioneer
+
 setup(
     name="q2-diversity",
-    version="2017.3.0.dev",
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     packages=find_packages(),
-    install_requires=['qiime2 == 2017.3.*', 'q2-feature-table == 2017.3.*',
-                      'q2-types == 2017.3.*', 'q2templates == 2017.3.*',
-                      'scikit-bio', 'seaborn', 'statsmodels', 'scipy', 'numpy',
-                      'pandas', 'biom-format >= 2.1.5, < 2.2.0',
-                      # `ipywidgets` included to avoid ShimWarning from
-                      # `seaborn` imports:
-                      #  https://github.com/mwaskom/seaborn/issues/874
-                      'ipywidgets'],
     package_data={'q2_diversity._alpha': [
                       'alpha_group_significance_assets/index.html',
                       'alpha_group_significance_assets/dst/*',
@@ -37,5 +32,6 @@ setup(
     url="https://qiime2.org",
     entry_points={
         'qiime2.plugins': ['q2-diversity=q2_diversity.plugin_setup:plugin']
-    }
+    },
+    zip_safe=False,
 )

@@ -18,7 +18,8 @@ import numpy as np
 import pandas as pd
 import pandas.util.testing as pdt
 
-from q2_diversity import alpha, alpha_phylogenetic, alpha_correlation
+from q2_diversity import (alpha, alpha_phylogenetic, alpha_correlation,
+                          alpha_group_significance)
 
 
 class AlphaTests(unittest.TestCase):
@@ -209,3 +210,35 @@ class AlphaCorrelationTests(unittest.TestCase):
             self.assertTrue(os.path.exists(jsonp_fp))
 
             self.assertTrue('"sampleSize": 3' in open(jsonp_fp).read())
+
+    def test_metadata_indexing_alpha_correlation(self):
+        # The idea behind this test is to use integer indices to confirm
+        # that the metadata category mapping is joining on labels, not on
+        # indices. If it was joining on the index, the metadata would map in
+        # the opposite direction (e.g. "data":[[100,10],[200,20],[300,30]]).
+        alpha_div = pd.Series([10, 20, 30], name='alpha-div', index=[3, 2, 1])
+        md = qiime2.Metadata(pd.DataFrame({'value': [100, 200, 300]},
+                             index=[1, 2, 3]))
+        with tempfile.TemporaryDirectory() as output_dir:
+            alpha_correlation(output_dir, alpha_div, md)
+            jsonp_fp = os.path.join(output_dir, 'category-value.jsonp')
+            self.assertTrue(os.path.exists(jsonp_fp))
+            jsonp = open(jsonp_fp).read()
+            self.assertTrue('"index":[3,2,1]' in jsonp)
+            self.assertTrue('"data":[[300,10],[200,20],[100,30]]' in jsonp)
+
+    def test_metadata_indexing_alpha_group_significance(self):
+        # The idea behind this test is to use integer indices to confirm
+        # that the metadata category mapping is joining on labels, not on
+        # indices. If it was joining on the index, the metadata would map in
+        # the opposite direction (e.g. "data":[[30],[10,20]]).
+        alpha_div = pd.Series([10, 20, 30], name='alpha-div', index=[3, 2, 1])
+        md = qiime2.Metadata(pd.DataFrame({'value': ['foo', 'foo', 'bar']},
+                             index=[1, 2, 3]))
+        with tempfile.TemporaryDirectory() as output_dir:
+            alpha_group_significance(output_dir, alpha_div, md)
+            jsonp_fp = os.path.join(output_dir, 'category-value.jsonp')
+            self.assertTrue(os.path.exists(jsonp_fp))
+            jsonp = open(jsonp_fp).read()
+            self.assertTrue('"index":["bar (n=1)","foo (n=2)"]' in jsonp)
+            self.assertTrue('"data":[[10],[20,30]]' in jsonp)

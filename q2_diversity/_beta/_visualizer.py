@@ -286,10 +286,11 @@ def beta_correlation(output_dir: str,
                              metadata_distances[id1, id2]))
     x = 'Input distance'
     y = 'Euclidean distance of\n%s' % metadata.name
+    plt.figure()
     scatter_data = pd.DataFrame(scatter_data, columns=[x, y])
-    fig = sns.regplot(x=x, y=y, data=scatter_data, fit_reg=False).get_figure()
-    fig.savefig(os.path.join(output_dir, 'beta-correlation-scatter.png'))
-    fig.savefig(os.path.join(output_dir, 'beta-correlation-scatter.pdf'))
+    sns.regplot(x=x, y=y, data=scatter_data, fit_reg=False)
+    plt.savefig(os.path.join(output_dir, 'beta-correlation-scatter.png'))
+    plt.savefig(os.path.join(output_dir, 'beta-correlation-scatter.pdf'))
 
     index = os.path.join(
         TEMPLATES, 'beta_correlation_assets', 'index.html')

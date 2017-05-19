@@ -211,7 +211,7 @@ class AlphaCorrelationTests(unittest.TestCase):
 
             self.assertTrue('"sampleSize": 3' in open(jsonp_fp).read())
 
-    def test_metadata_indexing_alpha_correlation(self):
+    def test_metadata_indexing(self):
         # The idea behind this test is to use integer indices to confirm
         # that the metadata category mapping is joining on labels, not on
         # indices. If it was joining on the index, the metadata would map in
@@ -227,7 +227,122 @@ class AlphaCorrelationTests(unittest.TestCase):
             self.assertTrue('"index":[3,2,1]' in jsonp)
             self.assertTrue('"data":[[300,10],[200,20],[100,30]]' in jsonp)
 
-    def test_metadata_indexing_alpha_group_significance(self):
+
+class AlphaGroupSignificanceTests(unittest.TestCase):
+
+    def test_alpha_group_significance(self):
+        alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
+                              index=['sample1', 'sample2', 'sample3'])
+        md = qiime2.Metadata(
+            pd.DataFrame({'a or b': ['a', 'b', 'b']},
+                         index=['sample1', 'sample2', 'sample3']))
+
+        with tempfile.TemporaryDirectory() as output_dir:
+            alpha_group_significance(output_dir, alpha_div, md)
+            index_fp = os.path.join(output_dir, 'index.html')
+            self.assertTrue(os.path.exists(index_fp))
+            self.assertTrue(os.path.exists(
+                            os.path.join(output_dir,
+                                         'category-a%20or%20b.jsonp')))
+            self.assertTrue('Kruskal-Wallis (all groups)'
+                            in open(index_fp).read())
+            self.assertTrue('Kruskal-Wallis (pairwise)'
+                            in open(index_fp).read())
+
+    def test_alpha_group_significance_some_numeric(self):
+        alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
+                              index=['sample1', 'sample2', 'sample3'])
+        md = qiime2.Metadata(
+            pd.DataFrame({'a or b': ['a', 'b', 'b'],
+                          'bad': ['1.0', '2.0', '3.0']},
+                         index=['sample1', 'sample2', 'sample3']))
+
+        with tempfile.TemporaryDirectory() as output_dir:
+            alpha_group_significance(output_dir, alpha_div, md)
+            index_fp = os.path.join(output_dir, 'index.html')
+            self.assertTrue(os.path.exists(index_fp))
+            self.assertTrue(os.path.exists(
+                            os.path.join(output_dir,
+                                         'category-a%20or%20b.jsonp')))
+            self.assertFalse(os.path.exists(
+                             os.path.join(output_dir,
+                                          'bad-value.jsonp')))
+            self.assertTrue('not categorical:' in open(index_fp).read())
+            self.assertTrue('<strong>bad' in open(index_fp).read())
+
+    def test_alpha_group_significance_one_group_all_unique_values(self):
+        alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
+                              index=['sample1', 'sample2', 'sample3'])
+        md = qiime2.Metadata(
+            pd.DataFrame({'a or b': ['a', 'b', 'b'],
+                          'bad': ['x', 'y', 'z']},
+                         index=['sample1', 'sample2', 'sample3']))
+
+        with tempfile.TemporaryDirectory() as output_dir:
+            alpha_group_significance(output_dir, alpha_div, md)
+            index_fp = os.path.join(output_dir, 'index.html')
+            self.assertTrue(os.path.exists(index_fp))
+            self.assertTrue(os.path.exists(
+                            os.path.join(output_dir,
+                                         'category-a%20or%20b.jsonp')))
+            self.assertFalse(os.path.exists(
+                             os.path.join(output_dir,
+                                          'category-bad.jsonp')))
+            self.assertTrue('number of samples' in open(index_fp).read())
+            self.assertTrue('<strong>bad' in open(index_fp).read())
+
+    def test_alpha_group_significance_one_group_single_value(self):
+        alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
+                              index=['sample1', 'sample2', 'sample3'])
+        md = qiime2.Metadata(
+            pd.DataFrame({'a or b': ['a', 'b', 'b'],
+                          'bad': ['x', 'x', 'x']},
+                         index=['sample1', 'sample2', 'sample3']))
+
+        with tempfile.TemporaryDirectory() as output_dir:
+            alpha_group_significance(output_dir, alpha_div, md)
+            index_fp = os.path.join(output_dir, 'index.html')
+            self.assertTrue(os.path.exists(index_fp))
+            self.assertTrue(os.path.exists(
+                            os.path.join(output_dir,
+                                         'category-a%20or%20b.jsonp')))
+            self.assertFalse(os.path.exists(
+                             os.path.join(output_dir,
+                                          'category-bad.jsonp')))
+            self.assertTrue('only a single' in open(index_fp).read())
+            self.assertTrue('<strong>bad' in open(index_fp).read())
+
+    def test_alpha_group_significance_KW_value_error(self):
+        alpha_div = pd.Series([2.0, 2.0, 3.0, 2.0], name='alpha-div',
+                              index=['sample1', 'sample2', 'sample3',
+                                     'sample4'])
+        md = qiime2.Metadata(
+            pd.DataFrame({'x': ['a', 'b', 'b', 'c']},
+                         index=['sample1', 'sample2', 'sample3', 'sample4']))
+
+        with tempfile.TemporaryDirectory() as output_dir:
+            alpha_group_significance(output_dir, alpha_div, md)
+            index_fp = os.path.join(output_dir, 'index.html')
+            self.assertTrue(os.path.exists(index_fp))
+            self.assertTrue(os.path.exists(
+                            os.path.join(output_dir,
+                                         'category-x.jsonp')))
+            self.assertTrue('pairwise group comparisons have been omitted'
+                            in open(index_fp).read())
+            self.assertTrue('x:c (n=1) vs x:a (n=1)' in open(index_fp).read())
+
+    def test_alpha_group_significance_numeric_only(self):
+        alpha_div = pd.Series([2.0, 4.0, 6.0], name='alpha-div',
+                              index=['sample1', 'sample2', 'sample3'])
+        md = qiime2.Metadata(
+            pd.DataFrame({'value': ['1.0', '2.0', '3.0']},
+                         index=['sample1', 'sample2', 'sample3']))
+
+        with tempfile.TemporaryDirectory() as output_dir:
+            with self.assertRaisesRegex(ValueError, 'Only numeric'):
+                alpha_group_significance(output_dir, alpha_div, md)
+
+    def test_metadata_indexing(self):
         # The idea behind this test is to use integer indices to confirm
         # that the metadata category mapping is joining on labels, not on
         # indices. If it was joining on the index, the metadata would map in

@@ -135,6 +135,125 @@ class TestFilterDistanceMatrix(unittest.TestCase):
         expected = skbio.DistanceMatrix([[0]], ['S3'])
         self.assertEqual(filtered, expected)
 
+    def test_with_exclude_ids_filter_nothing(self):
+        df = pd.DataFrame({'Subject': ['subject-1'],
+                           'SampleType': ['tongue']},
+                          index=['S2000'])
+        metadata = qiime2.Metadata(df)
+
+        dm = skbio.DistanceMatrix([[0, 1, 2], [1, 0, 3], [2, 3, 0]],
+                                  ['S1', 'S2', 'S3'])
+
+        filtered = filter_distance_matrix(dm, metadata,
+                                          where=None,
+                                          exclude_ids=True)
+        self.assertEqual(self._sorted(filtered), dm)
+
+    def test_with_exclude_ids_filter_one(self):
+        df = pd.DataFrame({'Subject': ['subject-1'],
+                           'SampleType': ['tongue']},
+                          index=['S2'])
+        metadata = qiime2.Metadata(df)
+
+        dm = skbio.DistanceMatrix([[0, 1, 2], [1, 0, 3], [2, 3, 0]],
+                                  ['S1', 'S2', 'S3'])
+
+        filtered = filter_distance_matrix(dm, metadata,
+                                          where=None,
+                                          exclude_ids=True)
+        expected = skbio.DistanceMatrix([[0, 2], [2, 0]], ['S1', 'S3'])
+        self.assertEqual(self._sorted(filtered), expected)
+
+    def test_with_exclude_ids_filter_two(self):
+        df = pd.DataFrame({'Subject': ['subject-1', 'subject-1'],
+                           'SampleType': ['gut', 'tongue']},
+                          index=['S1', 'S2'])
+        metadata = qiime2.Metadata(df)
+
+        dm = skbio.DistanceMatrix([[0, 1, 2], [1, 0, 3], [2, 3, 0]],
+                                  ['S1', 'S2', 'S3'])
+
+        filtered = filter_distance_matrix(dm, metadata,
+                                          where=None,
+                                          exclude_ids=True)
+        expected = skbio.DistanceMatrix([[0]], ['S3'])
+        self.assertEqual(self._sorted(filtered), expected)
+
+    def test_with_exclude_ids_filter_all(self):
+        df = pd.DataFrame({'Subject': ['subject-1', 'subject-1', 'subject-2'],
+                           'SampleType': ['gut', 'tongue', 'gut']},
+                          index=['S1', 'S2', 'S3'])
+        metadata = qiime2.Metadata(df)
+
+        dm = skbio.DistanceMatrix([[0, 1, 2], [1, 0, 3], [2, 3, 0]],
+                                  ['S1', 'S2', 'S3'])
+
+        with self.assertRaisesRegex(ValueError, "All samples.*filtered"):
+            filter_distance_matrix(dm, metadata, where=None, exclude_ids=True)
+
+    def test_with_exclude_ids_where_filter_nothing(self):
+        df = pd.DataFrame({'Subject': ['subject-1', 'subject-1', 'subject-2'],
+                           'SampleType': ['gut', 'tongue', 'gut']},
+                          index=['S1', 'S2', 'S3'])
+        metadata = qiime2.Metadata(df)
+
+        dm = skbio.DistanceMatrix([[0, 1, 2], [1, 0, 3], [2, 3, 0]],
+                                  ['S1', 'S2', 'S3'])
+
+        filtered = filter_distance_matrix(dm, metadata,
+                                          where="SampleType='toe'",
+                                          exclude_ids=True)
+        self.assertEqual(self._sorted(filtered), dm)
+
+    def test_with_exclude_ids_where_filter_one(self):
+        df = pd.DataFrame({'Subject': ['subject-1', 'subject-1', 'subject-2'],
+                           'SampleType': ['gut', 'tongue', 'gut']},
+                          index=['S1', 'S2', 'S3'])
+        metadata = qiime2.Metadata(df)
+
+        dm = skbio.DistanceMatrix([[0, 1, 2], [1, 0, 3], [2, 3, 0]],
+                                  ['S1', 'S2', 'S3'])
+
+        filtered = filter_distance_matrix(dm, metadata,
+                                          where="SampleType='tongue'",
+                                          exclude_ids=True)
+        expected = skbio.DistanceMatrix([[0, 2], [2, 0]],
+                                        ['S1', 'S3'])
+        self.assertEqual(self._sorted(filtered), expected)
+
+    def test_with_exclude_ids_where_filter_two(self):
+        df = pd.DataFrame({'Subject': ['subject-1', 'subject-1', 'subject-2'],
+                           'SampleType': ['elbow', 'tongue', 'gut']},
+                          index=['S1', 'S2', 'S3'])
+        metadata = qiime2.Metadata(df)
+
+        dm = skbio.DistanceMatrix([[0, 1, 2], [1, 0, 3], [2, 3, 0]],
+                                  ['S1', 'S2', 'S3'])
+
+        where = "SampleType='tongue' OR SampleType='gut'"
+
+        filtered = filter_distance_matrix(dm, metadata,
+                                          where,
+                                          exclude_ids=True)
+        expected = skbio.DistanceMatrix([[0]], ['S1'])
+        self.assertEqual(filtered, expected)
+
+    def test_with_exclude_ids_where_filter_all(self):
+        df = pd.DataFrame({'Subject': ['subject-1', 'subject-1', 'subject-2'],
+                           'SampleType': ['gut', 'tongue', 'gut']},
+                          index=['S1', 'S2', 'S3'])
+        metadata = qiime2.Metadata(df)
+
+        dm = skbio.DistanceMatrix([[0, 1, 2], [1, 0, 3], [2, 3, 0]],
+                                  ['S1', 'S2', 'S3'])
+
+        where = "SampleType='tongue' OR SampleType='gut'"
+
+        with self.assertRaisesRegex(ValueError, "All samples.*filtered"):
+            filter_distance_matrix(dm, metadata,
+                                   where,
+                                   exclude_ids=True)
+
 
 if __name__ == "__main__":
     unittest.main()

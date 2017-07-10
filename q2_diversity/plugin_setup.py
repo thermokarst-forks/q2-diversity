@@ -208,7 +208,8 @@ plugin.methods.register_function(
     },
     parameters={
         'metadata': Metadata,
-        'where': Str
+        'where': Str,
+        'exclude_ids': Bool
     },
     outputs=[
         ('filtered_distance_matrix', DistanceMatrix)
@@ -216,18 +217,24 @@ plugin.methods.register_function(
     name="Filter samples from a distance matrix.",
     description="Filter samples from a distance matrix, retaining only the "
                 "samples matching search criteria specified by "
-                "`metadata` and `where` parameters. See the filtering "
-                "tutorial on https://docs.qiime2.org for additional details.",
+                "`metadata` and `where` parameters (or retaining only the "
+                "samples not matching that criteria, if `exclude_ids` is "
+                "True). See the filtering tutorial on "
+                "https://docs.qiime2.org for additional details.",
     input_descriptions={
         'distance_matrix': 'Distance matrix to filter by sample.'
     },
     parameter_descriptions={
-        'metadata': 'Sample metadata used in conjuction with `where` '
-                    'parameter to select samples to retain',
+        'metadata': 'Sample metadata used with `where` parameter when '
+                    'selecting samples to retain, or with `exclude_ids` '
+                    'when selecting samples to discard.',
         'where': 'SQLite WHERE clause specifying sample metadata criteria '
                  'that must be met to be included in the filtered distance '
                  'matrix. If not provided, all samples in `metadata` that are '
-                 'also in the input distance matrix will be retained.'
+                 'also in the input distance matrix will be retained.',
+        'exclude_ids': 'If `True`, the samples selected by `metadata` or '
+                       '`where` parameters will be excluded from the filtered '
+                       'distance matrix instead of being retained.'
     },
     output_descriptions={
         'filtered_distance_matrix': 'Distance matrix filtered to include '

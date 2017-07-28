@@ -21,7 +21,8 @@ import pandas as pd
 import qiime2
 
 from q2_diversity import (beta, beta_phylogenetic, bioenv,
-                          beta_group_significance, beta_correlation)
+                          beta_group_significance, beta_correlation,
+                          beta_rarefaction)
 from q2_diversity._beta._visualizer import (_get_distance_boxplot_data,
                                             _metadata_distance)
 

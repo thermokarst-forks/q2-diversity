@@ -6,7 +6,7 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
-import os.path
+import os
 import collections
 import urllib.parse
 import pkg_resources
@@ -14,13 +14,17 @@ import itertools
 
 import qiime2
 import skbio
+import biom
 import skbio.diversity
-import scipy.spatial.distance
+from scipy import spatial, cluster
 import numpy
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import q2templates
+from ete3 import Tree, TreeStyle, NodeStyle, TextFace, Face, SeqMotifFace
+from q2_feature_table import rarefy
+from ._method import beta
 from statsmodels.sandbox.stats.multicomp import multipletests
 
 
@@ -224,12 +228,88 @@ def beta_group_significance(output_dir: str,
         'pairwise_results': pairwise_results_html
     })
 
+def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
+                     metric: str, num_iterations: int,
+                     phylogeny: skbio.TreeNode = None) -> None:
+    rare_trees = []
+    for i in range(num_iterations):
+        rt = rarefy(table, sampling_depth)
+        dm = beta(rt, metric)
+        tree = Tree.from_skbio(skbio.tree.nj(dm))
+        tree = _get_leaves(tree)
+        rare_trees.append(tree)
+    dm = beta(table, metric)
+    master_tree = Tree.from_skbio(skbio.tree.nj(dm))
+    master_leaves = _get_leaves(master_tree, master=True)
+    for leaves in master_leaves.keys():
+        nodes_w_leaves = 0
+        for tree in rare_trees:
+            if leaves in tree:
+                nodes_w_leaves += 1
+        master_leaves[leaves] = nodes_w_leaves / num_iterations
+    for descendant in master_tree.get_descendants():
+        if descendant.name == None:
+            leaves = tuple([leaf.name for leaf in descendant.get_leaves()])
+            face = TextFace(str(master_leaves[leaves]), fgcolor="#000000", fsize=5)
+            face.margin_right = 4
+            face.margin_left = 4
+            face.margin_top = 2
+            descendant.add_face(face, column=1, position='branch-bottom')
+        else:
+            face = TextFace(descendant.name, fgcolor="#000000", fsize=8)
+            descendant.add_face(face, column=0, position='branch-right')
+            # descendant.add_feature('support', str(master_leaves[leaves]))
+    tstyle = TreeStyle()
+    tstyle.show_branch_support = False
+    tstyle.show_leaf_name = False
+
+    nstyle = NodeStyle()
+    # nstyle["shape"] = "square"
+    # nstyle["size"] = 8
+    # nstyle["fgcolor"] = "#ffffff"
+    nstyle["hz_line_color"] = "#000000"
+    nstyle["vt_line_color"] = "#000000"
+
+    for n in master_tree.traverse():
+        n.set_style(nstyle)
+
+    # result_html = master_tree.to_frame().to_html(classes=("table table-striped "
+    #                                                  "table-hover"))
+    # result_html = result_html.replace('border="1"', 'border="0"')
+    master_tree.render('result.svg', tree_style=tstyle)
+
+    with open('result.svg') as f:
+        result_svg = f.read()
+
+    index = os.path.join(
+        TEMPLATES, 'beta_group_significance_assets', 'index.html')
+    q2templates.render(index, output_dir, context={
+    'result': result_svg
+    })
+    # master_tree.render('HELLO.svg', tree_style=tstyle)
+
+
+def _get_leaves(tree, master=False):
+    nodes = dict() if master else set()
+
+    for descendant in tree.get_descendants():
+        if descendant.name == None:
+            leaves = tuple([leaf.name for leaf in descendant.get_leaves()])
+
+            if master:
+                nodes[leaves] = 0
+            else:
+                nodes.add(leaves)
+
+    return nodes
+
+
 
 def _metadata_distance(metadata: pd.Series)-> skbio.DistanceMatrix:
     # This code is derived from @jairideout's scikit-bio cookbook recipe,
     # "Exploring Microbial Community Diversity"
     # https://github.com/biocore/scikit-bio-cookbook
-    distances = scipy.spatial.distance.pdist(
+    distances = spatial.distance.pdist(
         metadata.values[:, numpy.newaxis], metric='euclidean')
     return skbio.DistanceMatrix(distances, ids=metadata.index)
 

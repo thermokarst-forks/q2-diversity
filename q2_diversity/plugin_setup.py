@@ -351,3 +351,11 @@ plugin.visualizers.register_function(
     description=('Determine whether numeric sample metadata category is '
                  'correlated with alpha diversity.')
 )
+
+plugin.visualizers.register_function(
+    function=q2_diversity._beta._visualizer.beta_rarefaction,
+    inputs={'table': FeatureTable[Frequency], 'phylogeny': Phylogeny[Rooted]},
+    parameters={'sampling_depth': Int, 'metric': Str, 'num_iterations': Int},
+    name='Beta rarefaction comparison',
+    description='Foo'
+)

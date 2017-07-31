@@ -355,7 +355,8 @@ plugin.visualizers.register_function(
 plugin.visualizers.register_function(
     function=q2_diversity._beta._visualizer.beta_rarefaction,
     inputs={'table': FeatureTable[Frequency], 'phylogeny': Phylogeny[Rooted]},
-    parameters={'sampling_depth': Int, 'metric': Str, 'num_iterations': Int},
+    parameters={'sampling_depth': Int, 'metric': Str, 'num_iterations': Int,
+                'metadata': Metadata},
     name='Beta rarefaction comparison',
     description='Foo'
 )

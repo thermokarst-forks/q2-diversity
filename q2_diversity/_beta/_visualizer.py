@@ -230,76 +230,82 @@ def beta_group_significance(output_dir: str,
 
 def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
                      metric: str, num_iterations: int,
-                     phylogeny: skbio.TreeNode = None) -> None:
-    rare_trees = []
-    for i in range(num_iterations):
-        rt = rarefy(table, sampling_depth)
-        dm = beta(rt, metric)
-        tree = Tree.from_skbio(skbio.tree.nj(dm))
-        tree = _get_leaves(tree)
-        rare_trees.append(tree)
-    dm = beta(table, metric)
-    master_tree = Tree.from_skbio(skbio.tree.nj(dm))
-    master_leaves = _get_leaves(master_tree, master=True)
-    for leaves in master_leaves.keys():
-        nodes_w_leaves = 0
-        for tree in rare_trees:
-            if leaves in tree:
-                nodes_w_leaves += 1
-        master_leaves[leaves] = nodes_w_leaves / num_iterations
-    for descendant in master_tree.get_descendants():
-        if descendant.name == None:
-            leaves = tuple([leaf.name for leaf in descendant.get_leaves()])
-            face = TextFace(str(master_leaves[leaves]), fgcolor="#000000", fsize=5)
-            face.margin_right = 4
-            face.margin_left = 4
-            face.margin_top = 2
-            descendant.add_face(face, column=1, position='branch-bottom')
-        else:
-            face = TextFace(descendant.name, fgcolor="#000000", fsize=8)
-            descendant.add_face(face, column=0, position='branch-right')
-            # descendant.add_feature('support', str(master_leaves[leaves]))
-    tstyle = TreeStyle()
-    tstyle.show_branch_support = False
-    tstyle.show_leaf_name = False
+                     phylogeny: skbio.TreeNode = None,
+                     metadata: qiime2.Metadata = None) -> None:
+        rare_trees = []
+        for i in range(num_iterations):
+            rt = rarefy(table, sampling_depth)
+            dm = beta(rt, metric)
+            condensed_dm = dm.condensed_form()
+            upgma_tree = cluster.hierarchy.average(condensed_dm)
+            skbio_tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree,
+                                                                 dm.ids)
+            ete3_tree = Tree.from_skbio(skbio_tree)
+            leaves = _get_leaves(ete3_tree)
+            rare_trees.append(leaves)
+        dm = beta(table, metric)
+        condensed_dm = dm.condensed_form()
+        upgma_tree = cluster.hierarchy.average(condensed_dm)
+        skbio_tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree,
+                                                             dm.ids)
+        master_tree = Tree.from_skbio(skbio_tree)
+        master_leaves = _get_leaves(master_tree, master=True)
 
-    nstyle = NodeStyle()
-    # nstyle["shape"] = "square"
-    # nstyle["size"] = 8
-    # nstyle["fgcolor"] = "#ffffff"
-    nstyle["hz_line_color"] = "#000000"
-    nstyle["vt_line_color"] = "#000000"
+        for leaves in master_leaves.keys():
+            nodes_w_leaves = 0
+            for tree in rare_trees:
+                if leaves in tree:
+                    nodes_w_leaves += 1
+            master_leaves[leaves] = nodes_w_leaves / num_iterations
 
-    for n in master_tree.traverse():
-        n.set_style(nstyle)
 
-    # result_html = master_tree.to_frame().to_html(classes=("table table-striped "
-    #                                                  "table-hover"))
-    # result_html = result_html.replace('border="1"', 'border="0"')
-    master_tree.render('result.svg', tree_style=tstyle)
+        for descendant in master_tree.get_descendants():
+            if descendant.name == None:
+                leaves = tuple(sorted([leaf.name for leaf in descendant.get_leaves()]))
+                face = TextFace(str(master_leaves[leaves]), fgcolor="#000000", fsize=5)
+                face.margin_right = 4
+                face.margin_left = 4
+                face.margin_top = 2
+                descendant.add_face(face, column=1, position='branch-bottom')
+            else:
+                face = TextFace(descendant.name, fgcolor="#000000", fsize=8)
+                descendant.add_face(face, column=0, position='branch-right')
+                # descendant.add_feature('support', str(master_leaves[leaves]))
 
-    with open('result.svg') as f:
-        result_svg = f.read()
+        tstyle = TreeStyle()
+        tstyle.show_branch_support = False
+        tstyle.show_leaf_name = False
 
-    index = os.path.join(
-        TEMPLATES, 'beta_group_significance_assets', 'index.html')
-    q2templates.render(index, output_dir, context={
-    'result': result_svg
-    })
-    # master_tree.render('HELLO.svg', tree_style=tstyle)
+        nstyle = NodeStyle()
+        nstyle["hz_line_color"] = "#000000"
+        nstyle["vt_line_color"] = "#000000"
+
+        for n in master_tree.traverse():
+            n.set_style(nstyle)
+
+        master_tree.render('result.svg', tree_style=tstyle)
+
+        with open('result.svg') as f:
+            result_svg = f.read()
+
+        index = os.path.join(
+            TEMPLATES, 'beta_group_significance_assets', 'index.html')
+        q2templates.render(index, output_dir, context={
+        'result': result_svg
+        })
 
 
 def _get_leaves(tree, master=False):
-    nodes = dict() if master else set()
+    nodes = dict() if master else list()
 
     for descendant in tree.get_descendants():
         if descendant.name == None:
-            leaves = tuple([leaf.name for leaf in descendant.get_leaves()])
+            leaves = tuple(sorted([leaf.name for leaf in descendant.get_leaves()]))
 
             if master:
                 nodes[leaves] = 0
             else:
-                nodes.add(leaves)
+                nodes.append(leaves)
 
     return nodes
 

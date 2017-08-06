@@ -17,9 +17,9 @@ setup(
     packages=find_packages(),
     package_data={'q2_diversity._alpha': [
                       'alpha_group_significance_assets/index.html',
-                      'alpha_group_significance_assets/dst/*',
+                      'alpha_group_significance_assets/dist/*',
                       'alpha_correlation_assets/index.html',
-                      'alpha_correlation_assets/dst/*'],
+                      'alpha_correlation_assets/dist/*'],
                   'q2_diversity._beta': [
                       'beta_group_significance_assets/index.html',
                       'beta_correlation_assets/index.html',

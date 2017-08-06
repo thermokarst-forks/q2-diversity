@@ -117,7 +117,7 @@ def alpha_group_significance(output_dir: str, alpha_diversity: pd.Series,
             '; '.join([' vs '.join(e) for e in filtered_group_comparisons])})
 
     shutil.copytree(
-        os.path.join(TEMPLATES, 'alpha_group_significance_assets', 'dst'),
+        os.path.join(TEMPLATES, 'alpha_group_significance_assets', 'dist'),
         os.path.join(output_dir, 'dist'))
 
 
@@ -190,5 +190,6 @@ def alpha_correlation(output_dir: str,
         'categories': [quote(fn) for fn in filenames],
         'filtered_categories': ', '.join(filtered_categories)})
 
-    shutil.copytree(os.path.join(TEMPLATES, 'alpha_correlation_assets', 'dst'),
+    shutil.copytree(os.path.join(TEMPLATES, 'alpha_correlation_assets',
+                                 'dist'),
                     os.path.join(output_dir, 'dist'))

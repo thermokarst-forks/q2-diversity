@@ -22,7 +22,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import q2templates
-from ete3 import Tree, TreeStyle, NodeStyle, TextFace, Face, SeqMotifFace
+# must pip install palettable
+from palettable import colorbrewer
 from q2_feature_table import rarefy
 from ._method import beta
 from statsmodels.sandbox.stats.multicomp import multipletests
@@ -231,24 +232,28 @@ def beta_group_significance(output_dir: str,
 def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
                      metric: str, num_iterations: int,
                      phylogeny: skbio.TreeNode = None,
-                     metadata: qiime2.Metadata = None) -> None:
+                     color_scheme: str = 'PRGr',
+                     method: str='spearman') -> None:
         rare_trees = []
+        dms = []
+        # use as axis labels and get rid of 0-9 ticklabels on axes
+        test_statistics = {'spearman': 'rho', 'pearson': 'r'}
+
         for i in range(num_iterations):
             rt = rarefy(table, sampling_depth)
             dm = beta(rt, metric)
+            dms.append(dm)
             condensed_dm = dm.condensed_form()
             upgma_tree = cluster.hierarchy.average(condensed_dm)
             skbio_tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree,
                                                                  dm.ids)
-            ete3_tree = Tree.from_skbio(skbio_tree)
-            leaves = _get_leaves(ete3_tree)
+            leaves = _get_leaves(skbio_tree)
             rare_trees.append(leaves)
         dm = beta(table, metric)
         condensed_dm = dm.condensed_form()
         upgma_tree = cluster.hierarchy.average(condensed_dm)
-        skbio_tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree,
+        master_tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree,
                                                              dm.ids)
-        master_tree = Tree.from_skbio(skbio_tree)
         master_leaves = _get_leaves(master_tree, master=True)
 
         for leaves in master_leaves.keys():
@@ -258,54 +263,37 @@ def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
                     nodes_w_leaves += 1
             master_leaves[leaves] = nodes_w_leaves / num_iterations
 
+        similarity_mtx = numpy.ones(shape=(num_iterations, num_iterations))
+        for i in range(num_iterations):
+            for j in range(i):
+                r, p, n = skbio.stats.distance.mantel(dms[i], dms[j],
+                    method=method, permutations=0, strict=True)
+                similarity_mtx[i, j] = similarity_mtx[j, i] = r
 
-        for descendant in master_tree.get_descendants():
-            if descendant.name == None:
-                leaves = tuple(sorted([leaf.name for leaf in descendant.get_leaves()]))
-                face = TextFace(str(master_leaves[leaves]), fgcolor="#000000", fsize=5)
-                face.margin_right = 4
-                face.margin_left = 4
-                face.margin_top = 2
-                descendant.add_face(face, column=1, position='branch-bottom')
-            else:
-                face = TextFace(descendant.name, fgcolor="#000000", fsize=8)
-                descendant.add_face(face, column=0, position='branch-right')
-                # descendant.add_feature('support', str(master_leaves[leaves]))
-
-        tstyle = TreeStyle()
-        tstyle.show_branch_support = False
-        tstyle.show_leaf_name = False
-
-        nstyle = NodeStyle()
-        nstyle["hz_line_color"] = "#000000"
-        nstyle["vt_line_color"] = "#000000"
-
-        for n in master_tree.traverse():
-            n.set_style(nstyle)
-
-        master_tree.render('result.svg', tree_style=tstyle)
-
-        with open('result.svg') as f:
-            result_svg = f.read()
-
+        plt.figure()
+        sns.heatmap(similarity_mtx, cmap=color_scheme,
+                    vmin=0.0, vmax=1.0, annot=True)
+        frame = plt.gca()
+        frame.axes.get_xaxis().set_ticks([])
+        frame.axes.get_yaxis().set_ticks([])
+        plt.savefig(os.path.join(output_dir, 'heatmap.svg'))
+        result_html = '<img src="heatmap.svg">'
         index = os.path.join(
             TEMPLATES, 'beta_group_significance_assets', 'index.html')
         q2templates.render(index, output_dir, context={
-        'result': result_svg
+        'result': result_html
         })
 
 
 def _get_leaves(tree, master=False):
     nodes = dict() if master else list()
+    for node in tree.non_tips():
+        leaves = tuple(sorted([leaf.name for leaf in node.tips()]))
 
-    for descendant in tree.get_descendants():
-        if descendant.name == None:
-            leaves = tuple(sorted([leaf.name for leaf in descendant.get_leaves()]))
-
-            if master:
-                nodes[leaves] = 0
-            else:
-                nodes.append(leaves)
+        if master:
+            nodes[leaves] = 0
+        else:
+            nodes.append(leaves)
 
     return nodes
 

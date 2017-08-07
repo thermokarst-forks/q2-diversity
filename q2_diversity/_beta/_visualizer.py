@@ -22,8 +22,6 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import q2templates
-# must pip install palettable
-from palettable import colorbrewer
 from q2_feature_table import rarefy
 from ._method import beta
 from statsmodels.sandbox.stats.multicomp import multipletests
@@ -229,14 +227,14 @@ def beta_group_significance(output_dir: str,
         'pairwise_results': pairwise_results_html
     })
 
+
 def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
                      metric: str, num_iterations: int,
                      phylogeny: skbio.TreeNode = None,
-                     color_scheme: str = 'PRGr',
+                     color_scheme: str='BrBG',
                      method: str='spearman') -> None:
         rare_trees = []
         dms = []
-        # use as axis labels and get rid of 0-9 ticklabels on axes
         test_statistics = {'spearman': 'rho', 'pearson': 'r'}
 
         for i in range(num_iterations):
@@ -249,11 +247,12 @@ def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
                                                                  dm.ids)
             leaves = _get_leaves(skbio_tree)
             rare_trees.append(leaves)
+
         dm = beta(table, metric)
         condensed_dm = dm.condensed_form()
         upgma_tree = cluster.hierarchy.average(condensed_dm)
         master_tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree,
-                                                             dm.ids)
+                                                              dm.ids)
         master_leaves = _get_leaves(master_tree, master=True)
 
         for leaves in master_leaves.keys():
@@ -263,26 +262,46 @@ def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
                     nodes_w_leaves += 1
             master_leaves[leaves] = nodes_w_leaves / num_iterations
 
+        for node in master_tree.non_tips():
+            leaves = tuple([tip.name for tip in node.tips()])
+            if leaves in master_leaves.keys():
+                node.name = str(master_leaves[leaves])
+
+        master_tree.write(os.path.join(output_dir, 'master-tree.nwk'),
+                          'newick')
+
         similarity_mtx = numpy.ones(shape=(num_iterations, num_iterations))
+
         for i in range(num_iterations):
             for j in range(i):
-                r, p, n = skbio.stats.distance.mantel(dms[i], dms[j],
-                    method=method, permutations=0, strict=True)
+                r, p, n = skbio.stats.distance.mantel(
+                    dms[i], dms[j], method=method, permutations=0, strict=True)
                 similarity_mtx[i, j] = similarity_mtx[j, i] = r
 
         plt.figure()
         sns.heatmap(similarity_mtx, cmap=color_scheme,
-                    vmin=0.0, vmax=1.0, annot=True)
+                    vmin=-1.0, vmax=1.0, annot=True,
+                    cbar_kws={'ticks': [1, 0.5, 0, -0.5, -1]}).set(
+                        xlabel=test_statistics[method],
+                        ylabel=test_statistics[method])
         frame = plt.gca()
         frame.axes.get_xaxis().set_ticks([])
         frame.axes.get_yaxis().set_ticks([])
         plt.savefig(os.path.join(output_dir, 'heatmap.svg'))
-        result_html = '<img src="heatmap.svg">'
+
+        heatmap_template = os.path.join(
+            TEMPLATES, 'beta_rarefaction_assets', 'heatmap.html')
+        master_tree_template = os.path.join(
+            TEMPLATES, 'beta_rarefaction_assets', 'master-tree.html')
         index = os.path.join(
-            TEMPLATES, 'beta_group_significance_assets', 'index.html')
-        q2templates.render(index, output_dir, context={
-        'result': result_html
-        })
+            TEMPLATES, 'beta_rarefaction_assets', 'index.html')
+        templates = [index, heatmap_template, master_tree_template]
+
+        q2templates.render(templates, output_dir, context={
+            'tabs': [{'url': 'heatmap.html',
+                      'title': 'Heatmap'},
+                     {'url': 'master-tree.html',
+                      'title': 'Master Tree'}]})
 
 
 def _get_leaves(tree, master=False):
@@ -296,7 +315,6 @@ def _get_leaves(tree, master=False):
             nodes.append(leaves)
 
     return nodes
-
 
 
 def _metadata_distance(metadata: pd.Series)-> skbio.DistanceMatrix:

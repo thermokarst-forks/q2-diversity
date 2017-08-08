@@ -27,6 +27,10 @@ def non_phylogenetic_metrics():
             'sokalsneath', 'wminkowski'}
 
 
+def all_metrics():
+    return {*phylogenetic_metrics(), *non_phylogenetic_metrics()}
+
+
 def beta_phylogenetic(table: biom.Table, phylogeny: skbio.TreeNode,
                       metric: str)-> skbio.DistanceMatrix:
     if metric not in phylogenetic_metrics():

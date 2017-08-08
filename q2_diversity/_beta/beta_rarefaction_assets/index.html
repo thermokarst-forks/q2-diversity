@@ -1,1 +1,23 @@
-{% extends "tab-parent.html" %}
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-12">
+    <a href='heatmap.svg' download='heatmap.svg' target='_blank' class='btn btn-default'>
+      Download Heatmap SVG
+    </a>
+    <a href='rarefaction-iteration-similarities.tsv' download='rarefaction-iteration-similarities.tsv' target='_blank' class='btn btn-default'>
+      Download Data as TSV
+    </a>
+    <a href='master-tree.nwk' download='master-tree.nwk' target='_blank' class='btn btn-default'>
+      Download Newick Master Tree
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <img src="heatmap.svg">
+  </div>
+</div>
+{% endblock %}

@@ -231,105 +231,113 @@ def beta_group_significance(output_dir: str,
 
 def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
                      metric: str, num_iterations: int,
-                     phylogeny: skbio.TreeNode = None,
+                     rarefy_for_master_tree: bool=True,
+                     phylogeny: skbio.TreeNode=None,
                      color_scheme: str='BrBG',
                      method: str='spearman') -> None:
-        rare_trees = []
-        dms = []
-        test_statistics = {'spearman': 'rho', 'pearson': 'r'}
+    test_statistics = {'spearman': 'rho', 'pearson': 'r'}
 
-        if metric in phylogenetic_metrics():
-            if phylogeny is None:
-                raise ValueError("A phylogenetic metric (%s) was requested, "
-                                 "but a phylogenetic tree was not provided. "
-                                 "Phylogeny must be provided when using a "
-                                 "phylogenetic diversity metric." % metric)
-            beta_metric = functools.partial(beta_phylogenetic,
-                                            phylogeny=phylogeny)
-        else:
-            beta_metric = beta
+    if metric in phylogenetic_metrics():
+        if phylogeny is None:
+            raise ValueError("A phylogenetic metric (%s) was requested, "
+                             "but a phylogenetic tree was not provided. "
+                             "Phylogeny must be provided when using a "
+                             "phylogenetic diversity metric." % metric)
+        beta_metric = functools.partial(beta_phylogenetic,
+                                        phylogeny=phylogeny)
+    else:
+        beta_metric = beta
 
-        for i in range(num_iterations):
-            rt = rarefy(table, sampling_depth)
-            dm = beta_metric(table=rt, metric=metric)
-            dms.append(dm)
-            condensed_dm = dm.condensed_form()
-            upgma_tree = cluster.hierarchy.average(condensed_dm)
-            skbio_tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree,
-                                                                 dm.ids)
-            leaves = _get_leaves(skbio_tree)
-            rare_trees.append(leaves)
+    distance_matrices, rarefied_table = _get_multiple_rarefaction(
+        beta_metric, metric, num_iterations, table, sampling_depth)
 
-        dm = beta_metric(table=rt, metric=metric)
+    if rarefy_for_master_tree:
+        table = rarefied_table
+
+    master_tree = _get_computed_tree(
+        beta_metric, metric, num_iterations, table, distance_matrices)
+
+    similarity_mtx = _compute_similarity_matrix(num_iterations,
+                                                distance_matrices, method)
+
+    nwk_fp = os.path.join(output_dir, 'master_tree.nwk')
+    master_tree.write(nwk_fp, 'newick')
+
+    plt.figure()
+    sns.heatmap(similarity_mtx, cmap=color_scheme,
+                vmin=-1.0, vmax=1.0, annot=False,
+                cbar_kws={'ticks': [1, 0.5, 0, -0.5, -1]}).set(
+                    xlabel=test_statistics[method],
+                    ylabel=test_statistics[method])
+    frame = plt.gca()
+    frame.axes.get_xaxis().set_ticks([])
+    frame.axes.get_yaxis().set_ticks([])
+
+    plt.savefig(os.path.join(output_dir, 'heatmap.svg'))
+    similarity_mtx_fp = \
+        os.path.join(output_dir, 'rarefaction-iteration-similarities.tsv')
+    np.savetxt(similarity_mtx_fp, similarity_mtx, fmt='%1.3f',
+               delimiter='\t')
+
+    index_fp = os.path.join(TEMPLATES, 'beta_rarefaction_assets', 'index.html')
+    q2templates.render(index_fp, output_dir)
+
+
+def _get_multiple_rarefaction(beta_metric, metric, num_iterations, table,
+                              sampling_depth):
+    distance_matrices = []
+    for _ in range(num_iterations):
+        rarefied_table = rarefy(table, sampling_depth)
+        distance_matrix = beta_metric(table=rarefied_table, metric=metric)
+        distance_matrices.append(distance_matrix)
+    return (distance_matrices, rarefied_table)
+
+
+def _get_computed_tree(beta_metric, metric, num_iterations, table,
+                       distance_matrices):
+    trees = []
+    for dm in distance_matrices:
         condensed_dm = dm.condensed_form()
         upgma_tree = cluster.hierarchy.average(condensed_dm)
-        master_tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree,
-                                                              dm.ids)
-        master_leaves = _get_leaves(master_tree, master=True)
+        tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree, dm.ids)
+        leaves = _get_leaves(tree)
+        trees.append(leaves)
 
-        for leaves in master_leaves.keys():
-            nodes_w_leaves = 0
-            for tree in rare_trees:
-                if leaves in tree:
-                    nodes_w_leaves += 1
-            master_leaves[leaves] = nodes_w_leaves / num_iterations
+    dm = beta_metric(table=table, metric=metric)
+    condensed_dm = dm.condensed_form()
+    upgma_tree = cluster.hierarchy.average(condensed_dm)
+    master_tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree, dm.ids)
+    master_leaves = dict.fromkeys(_get_leaves(master_tree), 0)
 
-        for node in master_tree.non_tips():
-            leaves = tuple([tip.name for tip in node.tips()])
-            if leaves in master_leaves.keys():
-                node.name = str(master_leaves[leaves])
+    for leaves in master_leaves:
+        nodes_w_leaves = 0
+        for tree in trees:
+            if leaves in tree:
+                nodes_w_leaves += 1
+        master_leaves[leaves] = nodes_w_leaves / num_iterations
 
-        master_tree.write(os.path.join(output_dir, 'master-tree.nwk'),
-                          'newick')
-
-        similarity_mtx = np.ones(shape=(num_iterations, num_iterations))
-
-        for i in range(num_iterations):
-            for j in range(i):
-                r, p, n = skbio.stats.distance.mantel(
-                    dms[i], dms[j], method=method, permutations=0, strict=True)
-                similarity_mtx[i, j] = similarity_mtx[j, i] = r
-
-        plt.figure()
-        sns.heatmap(similarity_mtx, cmap=color_scheme,
-                    vmin=-1.0, vmax=1.0, annot=False,
-                    cbar_kws={'ticks': [1, 0.5, 0, -0.5, -1]}).set(
-                        xlabel=test_statistics[method],
-                        ylabel=test_statistics[method])
-        frame = plt.gca()
-        frame.axes.get_xaxis().set_ticks([])
-        frame.axes.get_yaxis().set_ticks([])
-        plt.savefig(os.path.join(output_dir, 'heatmap.svg'))
-        similarity_mtx_fp = \
-            os.path.join(output_dir, 'rarefaction-iteration-similarities.tsv')
-        np.savetxt(similarity_mtx_fp, similarity_mtx, fmt='%1.3f',
-                   delimiter='\t')
-
-        heatmap_template = os.path.join(
-            TEMPLATES, 'beta_rarefaction_assets', 'heatmap.html')
-        master_tree_template = os.path.join(
-            TEMPLATES, 'beta_rarefaction_assets', 'master-tree.html')
-        index = os.path.join(
-            TEMPLATES, 'beta_rarefaction_assets', 'index.html')
-        templates = [index, heatmap_template, master_tree_template]
-
-        q2templates.render(templates, output_dir, context={
-            'tabs': [{'url': 'heatmap.html',
-                      'title': 'Heatmap'},
-                     {'url': 'master-tree.html',
-                      'title': 'Master Tree'}]})
+    for node in master_tree.non_tips():
+        leaves = tuple(tip.name for tip in node.tips())
+        if leaves in master_leaves.keys():
+            node.name = str(master_leaves[leaves])
+    return master_tree
 
 
-def _get_leaves(tree, master=False):
-    nodes = dict() if master else list()
+def _compute_similarity_matrix(num_iterations, distance_matrices, method):
+    similarity_mtx = np.ones(shape=(num_iterations, num_iterations))
+    for i in range(num_iterations):
+        for j in range(i):
+            r, p, n = skbio.stats.distance.mantel(
+                distance_matrices[i], distance_matrices[j], method=method,
+                permutations=0, strict=True)
+            similarity_mtx[i, j] = similarity_mtx[j, i] = r
+    return similarity_mtx
+
+
+def _get_leaves(tree):
+    nodes = set()
     for node in tree.non_tips():
-        leaves = tuple(sorted([leaf.name for leaf in node.tips()]))
-
-        if master:
-            nodes[leaves] = 0
-        else:
-            nodes.append(leaves)
-
+        nodes.update(tuple(sorted([leaf.name for leaf in node.tips()])))
     return nodes
 
 

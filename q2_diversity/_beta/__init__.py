@@ -7,9 +7,9 @@
 # ----------------------------------------------------------------------------
 
 from ._method import (beta_phylogenetic, beta, phylogenetic_metrics,
-                      non_phylogenetic_metrics)
+                      non_phylogenetic_metrics, all_metrics)
 from ._visualizer import bioenv, beta_group_significance, beta_correlation
 
 __all__ = ['beta_phylogenetic', 'beta', 'bioenv', 'beta_group_significance',
-           'phylogenetic_metrics', 'non_phylogenetic_metrics',
+           'phylogenetic_metrics', 'non_phylogenetic_metrics', 'all_metrics',
            'beta_correlation']

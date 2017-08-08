@@ -356,10 +356,14 @@ color_schemes = [
     'BrBG', 'BrBG_r', 'PRGn', 'PRGn_r', 'PiYG', 'PiYG_r',
     'PuOr', 'PuOr_r', 'RdBu', 'RdBu_r', 'RdGy', 'RdGy_r',
     'RdYlBu', 'RdYlBu_r', 'RdYlGn', 'RdYlGn_r']
+
 plugin.visualizers.register_function(
     function=q2_diversity._beta._visualizer.beta_rarefaction,
     inputs={'table': FeatureTable[Frequency], 'phylogeny': Phylogeny[Rooted]},
-    parameters={'sampling_depth': Int, 'metric': Str, 'num_iterations': Int,
+    parameters={'sampling_depth': Int,
+                'rarefy_for_master_tree': Bool,
+                'metric': Str % Choices(beta.all_metrics()),
+                'num_iterations': Int,
                 'color_scheme': Str % Choices(color_schemes),
                 'method': Str % Choices(beta_correlation_methods)},
     input_descriptions={

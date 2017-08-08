@@ -11,19 +11,20 @@ import collections
 import urllib.parse
 import pkg_resources
 import itertools
+import functools
 
 import qiime2
 import skbio
 import biom
 import skbio.diversity
 from scipy import spatial, cluster
-import numpy
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import q2templates
 from q2_feature_table import rarefy
-from ._method import beta
+from ._method import beta, beta_phylogenetic, phylogenetic_metrics
 from statsmodels.sandbox.stats.multicomp import multipletests
 
 
@@ -39,7 +40,7 @@ def bioenv(output_dir: str, distance_matrix: skbio.DistanceMatrix,
 
     # filter categorical columns
     pre_filtered_cols = set(df.columns)
-    df = df.select_dtypes([numpy.number]).dropna()
+    df = df.select_dtypes([np.number]).dropna()
     filtered_categorical_cols = pre_filtered_cols - set(df.columns)
 
     # filter 0 variance numerical columns
@@ -129,7 +130,7 @@ def beta_group_significance(output_dir: str,
     # category, including those with empty strings as values.
     metadata = pd.to_numeric(metadata.to_series(), errors='ignore')
     metadata = metadata.loc[list(distance_matrix.ids)]
-    metadata = metadata.replace(r'', numpy.nan).dropna()
+    metadata = metadata.replace(r'', np.nan).dropna()
 
     # filter the distance matrix to exclude samples that were dropped from
     # the metadata, and keep track of how many samples survived the filtering
@@ -237,9 +238,20 @@ def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
         dms = []
         test_statistics = {'spearman': 'rho', 'pearson': 'r'}
 
+        if metric in phylogenetic_metrics():
+            if phylogeny is None:
+                raise ValueError("A phylogenetic metric (%s) was requested, "
+                                 "but a phylogenetic tree was not provided. "
+                                 "Phylogeny must be provided when using a "
+                                 "phylogenetic diversity metric." % metric)
+            beta_metric = functools.partial(beta_phylogenetic,
+                                            phylogeny=phylogeny)
+        else:
+            beta_metric = beta
+
         for i in range(num_iterations):
             rt = rarefy(table, sampling_depth)
-            dm = beta(rt, metric)
+            dm = beta_metric(table=rt, metric=metric)
             dms.append(dm)
             condensed_dm = dm.condensed_form()
             upgma_tree = cluster.hierarchy.average(condensed_dm)
@@ -248,7 +260,7 @@ def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
             leaves = _get_leaves(skbio_tree)
             rare_trees.append(leaves)
 
-        dm = beta(table, metric)
+        dm = beta_metric(table=rt, metric=metric)
         condensed_dm = dm.condensed_form()
         upgma_tree = cluster.hierarchy.average(condensed_dm)
         master_tree = skbio.tree.TreeNode.from_linkage_matrix(upgma_tree,
@@ -270,7 +282,7 @@ def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
         master_tree.write(os.path.join(output_dir, 'master-tree.nwk'),
                           'newick')
 
-        similarity_mtx = numpy.ones(shape=(num_iterations, num_iterations))
+        similarity_mtx = np.ones(shape=(num_iterations, num_iterations))
 
         for i in range(num_iterations):
             for j in range(i):
@@ -280,7 +292,7 @@ def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
 
         plt.figure()
         sns.heatmap(similarity_mtx, cmap=color_scheme,
-                    vmin=-1.0, vmax=1.0, annot=True,
+                    vmin=-1.0, vmax=1.0, annot=False,
                     cbar_kws={'ticks': [1, 0.5, 0, -0.5, -1]}).set(
                         xlabel=test_statistics[method],
                         ylabel=test_statistics[method])
@@ -288,6 +300,10 @@ def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
         frame.axes.get_xaxis().set_ticks([])
         frame.axes.get_yaxis().set_ticks([])
         plt.savefig(os.path.join(output_dir, 'heatmap.svg'))
+        similarity_mtx_fp = \
+            os.path.join(output_dir, 'rarefaction-iteration-similarities.tsv')
+        np.savetxt(similarity_mtx_fp, similarity_mtx, fmt='%1.3f',
+                   delimiter='\t')
 
         heatmap_template = os.path.join(
             TEMPLATES, 'beta_rarefaction_assets', 'heatmap.html')
@@ -322,7 +338,7 @@ def _metadata_distance(metadata: pd.Series)-> skbio.DistanceMatrix:
     # "Exploring Microbial Community Diversity"
     # https://github.com/biocore/scikit-bio-cookbook
     distances = spatial.distance.pdist(
-        metadata.values[:, numpy.newaxis], metric='euclidean')
+        metadata.values[:, np.newaxis], metric='euclidean')
     return skbio.DistanceMatrix(distances, ids=metadata.index)
 
 
@@ -343,7 +359,7 @@ def beta_correlation(output_dir: str,
 
     initial_metadata_length = len(metadata)
     metadata = metadata.loc[list(distance_matrix.ids)]
-    metadata = metadata.replace(r'', numpy.nan).dropna()
+    metadata = metadata.replace(r'', np.nan).dropna()
     filtered_metadata_length = len(metadata)
 
     ids_with_missing_metadata = set(distance_matrix.ids) - set(metadata.index)

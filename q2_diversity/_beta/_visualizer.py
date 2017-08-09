@@ -18,7 +18,7 @@ import skbio
 import biom
 import skbio.diversity
 from scipy import spatial, cluster
-import numpy as np
+import numpy
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -40,7 +40,7 @@ def bioenv(output_dir: str, distance_matrix: skbio.DistanceMatrix,
 
     # filter categorical columns
     pre_filtered_cols = set(df.columns)
-    df = df.select_dtypes([np.number]).dropna()
+    df = df.select_dtypes([numpy.number]).dropna()
     filtered_categorical_cols = pre_filtered_cols - set(df.columns)
 
     # filter 0 variance numerical columns
@@ -130,7 +130,7 @@ def beta_group_significance(output_dir: str,
     # category, including those with empty strings as values.
     metadata = pd.to_numeric(metadata.to_series(), errors='ignore')
     metadata = metadata.loc[list(distance_matrix.ids)]
-    metadata = metadata.replace(r'', np.nan).dropna()
+    metadata = metadata.replace(r'', numpy.nan).dropna()
 
     # filter the distance matrix to exclude samples that were dropped from
     # the metadata, and keep track of how many samples survived the filtering
@@ -276,8 +276,8 @@ def beta_rarefaction(output_dir: str, table: biom.Table, sampling_depth: int,
     plt.savefig(os.path.join(output_dir, 'heatmap.svg'))
     similarity_mtx_fp = \
         os.path.join(output_dir, 'rarefaction-iteration-similarities.tsv')
-    np.savetxt(similarity_mtx_fp, similarity_mtx, fmt='%1.3f',
-               delimiter='\t')
+    numpy.savetxt(similarity_mtx_fp, similarity_mtx, fmt='%1.3f',
+                  delimiter='\t')
 
     index_fp = os.path.join(TEMPLATES, 'beta_rarefaction_assets', 'index.html')
     q2templates.render(index_fp, output_dir)
@@ -324,7 +324,7 @@ def _get_computed_tree(beta_metric, metric, num_iterations, table,
 
 
 def _compute_similarity_matrix(num_iterations, distance_matrices, method):
-    similarity_mtx = np.ones(shape=(num_iterations, num_iterations))
+    similarity_mtx = numpy.ones(shape=(num_iterations, num_iterations))
     for i in range(num_iterations):
         for j in range(i):
             r, p, n = skbio.stats.distance.mantel(
@@ -341,12 +341,12 @@ def _get_leaves(tree):
     return nodes
 
 
-def _metadata_distance(metadata: pd.Series)-> skbio.DistanceMatrix:
+def _metadata_distance(metadata: pd.Series) -> skbio.DistanceMatrix:
     # This code is derived from @jairideout's scikit-bio cookbook recipe,
     # "Exploring Microbial Community Diversity"
     # https://github.com/biocore/scikit-bio-cookbook
     distances = spatial.distance.pdist(
-        metadata.values[:, np.newaxis], metric='euclidean')
+        metadata.values[:, numpy.newaxis], metric='euclidean')
     return skbio.DistanceMatrix(distances, ids=metadata.index)
 
 
@@ -367,7 +367,7 @@ def beta_correlation(output_dir: str,
 
     initial_metadata_length = len(metadata)
     metadata = metadata.loc[list(distance_matrix.ids)]
-    metadata = metadata.replace(r'', np.nan).dropna()
+    metadata = metadata.replace(r'', numpy.nan).dropna()
     filtered_metadata_length = len(metadata)
 
     ids_with_missing_metadata = set(distance_matrix.ids) - set(metadata.index)

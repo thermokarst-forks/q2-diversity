@@ -21,9 +21,9 @@ import pandas as pd
 import qiime2
 
 from q2_diversity import (beta, beta_phylogenetic, bioenv,
-                          beta_group_significance, beta_correlation)
+                          beta_group_significance, beta_correlation,)
 from q2_diversity._beta._visualizer import (_get_distance_boxplot_data,
-                                            _metadata_distance)
+                                            _metadata_distance, _get_leaves)
 
 
 class BetaDiversityTests(unittest.TestCase):
@@ -637,6 +637,22 @@ class BetaCorrelationTests(unittest.TestCase):
             self.assertTrue('<td>42</td>' in open(index_fp).read())
             self.assertTrue('Spearman rho' in open(index_fp).read())
             self.assertFalse('Warning' in open(index_fp).read())
+
+
+class BetaRarefactionTests(unittest.TestCase):
+
+    def test_get_leaves(self):
+        tree = skbio.TreeNode.read(io.StringIO(
+            '((O1:0.25, O2:0.50):0.25, O3:0.75)root;'))
+        exp = {'O1', 'O2'}
+        obs = _get_leaves(tree)
+        self.assertEqual(exp, obs)
+
+    def test_get_leaves_empty(self):
+        tree = skbio.TreeNode.read(io.StringIO('(O3:0.75)root;'))
+        exp = set()
+        obs = _get_leaves(tree)
+        self.assertEqual(exp, obs)
 
 
 if __name__ == "__main__":

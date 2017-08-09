@@ -379,8 +379,13 @@ plugin.visualizers.register_function(
         'sampling_depth': ('The total frequency that each sample should be '
                            'rarefied to prior to computing diversity '
                            'metrics.'),
+        'rarefy_for_master_tree': ('If `False` the table used for computing '
+                                   'the master tree will be unrarefied.'),
         'metric': 'The beta diversity metric to be computed.',
-        'num_iterations': 'Number of rarefied tables to be created.'
+        'num_iterations': 'Number of rarefied tables to be created.',
+        'color_scheme': ('The matplotlib color scheme to generate the '
+                         'heatmap with.'),
+        'method': 'The correlation test to be applied.',
     },
     name='Beta rarefaction comparison',
     description='Performs jacknife comparison upon FeatureTable.'

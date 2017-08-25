@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 
 from qiime2.plugin import (Plugin, Str, Properties, MetadataCategory, Choices,
-                           Metadata, Int, Bool)
+                           Metadata, Int, Bool, Range)
 
 import q2_diversity
 from q2_diversity import _alpha as alpha
@@ -368,4 +368,42 @@ plugin.visualizers.register_function(
     name='Alpha diversity correlation',
     description=('Determine whether numeric sample metadata category is '
                  'correlated with alpha diversity.')
+)
+
+plugin.visualizers.register_function(
+    function=q2_diversity.alpha_rarefaction,
+    inputs={'table': FeatureTable[Frequency],
+            'phylogeny': Phylogeny[Rooted]},
+    parameters={'metric': Str % Choices(
+                                    alpha.alpha_rarefaction_supported_metrics),
+                'metadata': Metadata,
+                'min_depth': Int % Range(1, None),
+                'max_depth': Int % Range(1, None),
+                'steps': Int % Range(2, None),
+                'iterations': Int % Range(1, None)},
+    input_descriptions={
+        'table': 'Feature table to compute rarefaction curves from.',
+        'phylogeny': 'Optional phylogeny for phylogenetic metrics.',
+    },
+    parameter_descriptions={
+        'metric': ('The metric to be measured. By default computes '
+                   'observed_otus, shannon, and if phylogeny is '
+                   'provided, faith_pd.'),
+        'metadata': 'The sample metadata.',
+        'min_depth': 'The minimum rarefaction depth.',
+        'max_depth': ('The maximum rarefaction depth. '
+                      'Must be greater than min_depth.'),
+        'steps': ('The number of rarefaction depths to include '
+                  'between min_depth and max_depth.'),
+        'iterations': ('The number of rarefied feature tables to '
+                       'compute at each step.'),
+    },
+    name='Alpha rarefaction curves',
+    description=('Generate interactive alpha rarefaction curves by computing '
+                 'rarefactions between `min_depth` and `max_depth`. The '
+                 'number of intermediate depths to compute is controlled by '
+                 'the `steps` parameter, with n `iterations` being computed '
+                 'at each rarefaction depth. If sample metadata is provided, '
+                 'samples may be grouped based on distinct values within a '
+                 'metadata column.'),
 )

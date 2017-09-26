@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------------
 
 from qiime2.plugin import (Plugin, Str, Properties, MetadataCategory, Choices,
-                           Metadata, Int, Bool, Range)
+                           Metadata, Int, Bool, Range, Float)
 
 import q2_diversity
 from q2_diversity import _alpha as alpha
@@ -38,7 +38,19 @@ plugin = Plugin(
                  'and exploring community alpha and beta diversity through '
                  'statistics and visualizations in the context of sample '
                  'metadata.'),
-    short_description='Plugin for exploring community diversity.'
+    short_description='Plugin for exploring community diversity.',
+    citation_text=('Unweighted UniFrac: '
+                   'Lozupone and Knight 2005 Appl Environ Microbiol; DOI: '
+                   '10.1128/AEM.71.12.8228-8235.2005.\n'
+                   'Weighted UniFrac: '
+                   'Lozupone et al. 2007 Appl Environ Microbiol; DOI: '
+                   '10.1128/AEM.01996-06.\n'
+                   'Variance adjusted UniFrac: '
+                   'Chang et al. BMC Bioinformatics 2011 '
+                   'https://doi.org/10.1186/1471-2105-12-118.\n'
+                   'Generalized UniFrac: '
+                   'Chen et al. 2012 Bioinformatics; DOI: '
+                   '10.1093/bioinformatics/bts342')
 )
 
 plugin.methods.register_function(
@@ -46,7 +58,7 @@ plugin.methods.register_function(
     inputs={'table': FeatureTable[Frequency],
             'phylogeny': Phylogeny[Rooted]},
     parameters={'metric': Str % Choices(beta.phylogenetic_metrics()),
-                'n_jobs': Int},
+                'n_jobs': Int % Range(1, None)},
     outputs=[('distance_matrix', DistanceMatrix % Properties('phylogenetic'))],
     input_descriptions={
         'table': ('The feature table containing the samples over which beta '
@@ -67,6 +79,61 @@ plugin.methods.register_function(
     description=("Computes a user-specified phylogenetic beta diversity metric"
                  " for all pairs of samples in a feature table.")
 )
+
+
+plugin.methods.register_function(
+    function=q2_diversity.beta_phylogenetic_alt,
+    inputs={'table': FeatureTable[Frequency],
+            'phylogeny': Phylogeny[Rooted]},
+    parameters={'metric': Str % Choices(beta.phylogenetic_metrics_alt_dict()),
+                'n_jobs': Int,
+                'variance_adjusted': Bool,
+                'alpha': Float % Range(0, 1, inclusive_end=True),
+                'bypass_tips': Bool},
+    outputs=[('distance_matrix', DistanceMatrix % Properties('phylogenetic'))],
+    input_descriptions={
+        'table': ('The feature table containing the samples over which beta '
+                  'diversity should be computed.'),
+        'phylogeny': ('Phylogenetic tree containing tip identifiers that '
+                      'correspond to the feature identifiers in the table. '
+                      'This tree can contain tip ids that are not present in '
+                      'the table, but all feature ids in the table must be '
+                      'present in this tree.')
+    },
+    parameter_descriptions={
+        'metric': 'The beta diversity metric to be computed.',
+        'n_jobs': 'The number of workers to use.',
+        'variance_adjusted': ('Perform variance adjustment based on Chang et '
+                              'al. BMC Bioinformatics 2011. Weights distances '
+                              'based on the proportion of the relative '
+                              'abundance represented between the samples at a'
+                              ' given node under evaluation.'),
+        'alpha': ('This parameter is only used when the choice of metric is '
+                  'generalized_unifrac. The value of alpha controls importance'
+                  ' of sample proportions. 1.0 is weighted normalized UniFrac.'
+                  ' 0.0 is close to unweighted UniFrac, but only if the sample'
+                  ' proportions are dichotomized.'),
+        'bypass_tips': ('In a bifurcating tree, the tips make up about 50% of '
+                        'the nodes in a tree. By ignoring them, specificity '
+                        'can be traded for reduced compute time. This has the'
+                        ' effect of collapsing the phylogeny, and is analogous'
+                        ' (in concept) to moving from 99% to 97% OTUs')
+    },
+    output_descriptions={'distance_matrix': 'The resulting distance matrix.'},
+    name='Beta diversity (phylogenetic) - High Performance Computation',
+    description=("Computes a user-specified phylogenetic beta diversity metric"
+                 " for all pairs of samples in a feature table. This "
+                 "implementation is recommended for large datasets, otherwise "
+                 "the results are identical to beta_phylogenetic.\n\n"
+                 "This method is an implementation of the Strided State "
+                 "UniFrac algorithm. Multiple variants of the UniFrac metric "
+                 "are available, including Generalized UniFrac (Chen et al. "
+                 "2012), Variance Adjusted UniFrac (Chang et al. 2011), "
+                 "as well as Weighted normalized and unnormalized UniFrac "
+                 "(Lozupone et al. 2007) and unweighted UniFrac "
+                 "(Lozupone et al. 2005)")
+)
+
 
 plugin.methods.register_function(
     function=q2_diversity.beta,

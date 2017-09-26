@@ -12,12 +12,26 @@ import skbio
 import skbio.diversity
 import skbio.tree
 import sklearn.metrics
+import unifrac
+import psutil
+
+from q2_types.feature_table import BIOMV210Format
+from q2_types.tree import NewickFormat
+
+from functools import partial
 
 
 # We should consider moving these functions to scikit-bio. They're part of
 # the private API here for now.
 def phylogenetic_metrics():
     return {'unweighted_unifrac', 'weighted_unifrac'}
+
+
+def phylogenetic_metrics_alt_dict():
+    return {'unweighted_unifrac': unifrac.unweighted,
+            'weighted_unifrac': unifrac.weighted_unnormalized,
+            'weighted_normalized_unifrac': unifrac.weighted_normalized,
+            'generalized_unifrac': unifrac.generalized}
 
 
 def non_phylogenetic_metrics():
@@ -61,6 +75,39 @@ def beta_phylogenetic(table: biom.Table, phylogeny: skbio.TreeNode,
         raise skbio.tree.MissingNodeError(message)
 
     return results
+
+
+def beta_phylogenetic_alt(table: BIOMV210Format, phylogeny: NewickFormat,
+                          metric: str, n_jobs: int=1,
+                          variance_adjusted: bool=False,
+                          alpha=None,
+                          bypass_tips: bool=False) -> skbio.DistanceMatrix:
+
+    metrics = phylogenetic_metrics_alt_dict()
+    generalized_unifrac = 'generalized_unifrac'
+
+    if metric not in metrics:
+        raise ValueError("Unknown metric: %s" % metric)
+
+    if alpha is not None and metric != generalized_unifrac:
+        raise ValueError('The alpha parameter is only allowed when the choice'
+                         ' of metric is generalized_unifrac')
+
+    # this behaviour is undefined, so let's avoid a seg fault
+    cpus = psutil.cpu_count(logical=False)
+    if n_jobs > cpus:
+        raise ValueError('The value of n_jobs cannot exceed the number of '
+                         'processors (%d) available in this system.' % cpus)
+
+    if metric == generalized_unifrac:
+        alpha = 1.0 if alpha is None else alpha
+        f = partial(metrics[metric], alpha=alpha)
+    else:
+        f = metrics[metric]
+
+    # unifrac processes tables and trees should be filenames
+    return f(str(table), str(phylogeny), threads=n_jobs,
+             variance_adjusted=variance_adjusted, bypass_tips=bypass_tips)
 
 
 def beta(table: biom.Table, metric: str, n_jobs: int=1)-> skbio.DistanceMatrix:

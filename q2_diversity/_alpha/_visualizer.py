@@ -264,18 +264,21 @@ def _compute_rarefaction_data(feature_table, min_depth, max_depth, steps,
 
 
 def alpha_rarefaction(output_dir: str, table: biom.Table, max_depth: int,
-                      phylogeny: skbio.TreeNode=None, metric: str=None,
+                      phylogeny: skbio.TreeNode=None, metrics: set=None,
                       metadata: qiime2.Metadata=None, min_depth: int=1,
                       steps: int=10, iterations: int=10) -> None:
-    if metric is None:
-        metrics = ['observed_otus', 'shannon']
+
+    if metrics is None:
+        metrics = {'observed_otus', 'shannon'}
         if phylogeny is not None:
-            metrics.append('faith_pd')
+            metrics.add('faith_pd')
+    elif not metrics:
+        raise ValueError('`metrics` was given an empty set.')
     else:
-        if metric in phylogenetic_metrics() and phylogeny is None:
+        phylo_overlap = phylogenetic_metrics() & metrics
+        if phylo_overlap and phylogeny is None:
             raise ValueError('Phylogenetic metric %s was requested but '
-                             'phylogeny was not provided.' % metric)
-        metrics = [metric]
+                             'phylogeny was not provided.' % phylo_overlap)
 
     if max_depth <= min_depth:
         raise ValueError('Provided max_depth of %d must be greater than '

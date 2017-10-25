@@ -7,7 +7,8 @@
 # ----------------------------------------------------------------------------
 
 from qiime2.plugin import (Plugin, Str, Properties, MetadataCategory, Choices,
-                           Metadata, Int, Bool, Range, Float, Visualization)
+                           Metadata, Int, Bool, Range, Float, Set,
+                           Visualization)
 
 import q2_diversity
 from q2_diversity import _alpha as alpha
@@ -510,12 +511,12 @@ plugin.visualizers.register_function(
                  'correlated with alpha diversity.')
 )
 
+_metric_set = Set[Str % Choices(alpha.alpha_rarefaction_supported_metrics)]
 plugin.visualizers.register_function(
     function=q2_diversity.alpha_rarefaction,
     inputs={'table': FeatureTable[Frequency],
             'phylogeny': Phylogeny[Rooted]},
-    parameters={'metric': Str % Choices(
-                                    alpha.alpha_rarefaction_supported_metrics),
+    parameters={'metrics': _metric_set,
                 'metadata': Metadata,
                 'min_depth': Int % Range(1, None),
                 'max_depth': Int % Range(1, None),
@@ -526,9 +527,9 @@ plugin.visualizers.register_function(
         'phylogeny': 'Optional phylogeny for phylogenetic metrics.',
     },
     parameter_descriptions={
-        'metric': ('The metric to be measured. By default computes '
-                   'observed_otus, shannon, and if phylogeny is '
-                   'provided, faith_pd.'),
+        'metrics': ('The metrics to be measured. By default computes '
+                    'observed_otus, shannon, and if phylogeny is '
+                    'provided, faith_pd.'),
         'metadata': 'The sample metadata.',
         'min_depth': 'The minimum rarefaction depth.',
         'max_depth': ('The maximum rarefaction depth. '

@@ -465,28 +465,44 @@ plugin.visualizers.register_function(
                  'statistical test.')
 )
 
-beta_correlation_methods = ['spearman', 'pearson']
-
 plugin.visualizers.register_function(
-    function=q2_diversity.beta_correlation,
-    inputs={'distance_matrix': DistanceMatrix},
-    parameters={'metadata': MetadataCategory,
-                'permutations': Int,
-                'method': Str % Choices(beta_correlation_methods)},
-    name=('Beta diversity correlation'),
-    description=('Apply a two-sided Mantel test to identify correlation '
-                 'between the distance matrix and a numeric sample metadata '
-                 'category. Sample metadata pairwise distances are computed '
-                 'as the Euclidean distance between each pair of samples in '
-                 'the metadata category.'),
+    function=q2_diversity.mantel,
+    inputs={'dm1': DistanceMatrix,
+            'dm2': DistanceMatrix},
+    parameters={'permutations': Int % Range(0, None),
+                'method': Str % Choices(['spearman', 'pearson']),
+                'intersect_ids': Bool,
+                'label1': Str,
+                'label2': Str},
+    name='Apply the Mantel test to two distance matrices',
+    description='Apply a two-sided Mantel test to identify correlation '
+                'between two distance matrices.\n\nNote: the directionality '
+                'of the comparison has no bearing on the results. Thus, '
+                'comparing distance matrix X to distance matrix Y is '
+                'equivalent to comparing Y to X.\n\nNote: the order of '
+                'samples within the two distance matrices does not need to be '
+                'the same; the distance matrices will be reordered before '
+                'applying the Mantel test.\n\nSee the scikit-bio docs for '
+                'more details about the Mantel test:\n\n'
+                'http://scikit-bio.org/docs/latest/generated/generated/'
+                'skbio.stats.distance.mantel.html',
     input_descriptions={
-        'distance_matrix': 'Matrix of distances between pairs of samples.'
+        'dm1': 'Matrix of distances between pairs of samples.',
+        'dm2': 'Matrix of distances between pairs of samples.'
     },
     parameter_descriptions={
         'method': 'The correlation test to be applied in the Mantel test.',
-        'permutations': ('The number of permutations to be run when computing '
-                         'p-values.'),
-        'metadata': 'The sample metadata.',
+        'permutations': 'The number of permutations to be run when computing '
+                        'p-values. Supplying a value of zero will disable '
+                        'permutation testing and p-values will not be '
+                        'calculated (this results in *much* quicker execution '
+                        'time if p-values are not desired).',
+        'intersect_ids': 'If supplied, IDs that are not found in both '
+                         'distance matrices will be discarded before applying '
+                         'the Mantel test. Default behavior is to error on '
+                         'any mismatched IDs.',
+        'label1': 'Label for `dm1` in the output visualization.',
+        'label2': 'Label for `dm2` in the output visualization.'
     },
 )
 

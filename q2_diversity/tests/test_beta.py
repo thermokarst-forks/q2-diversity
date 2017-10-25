@@ -25,10 +25,9 @@ from qiime2.plugin.testing import TestPluginBase
 
 
 from q2_diversity import (beta, beta_phylogenetic, beta_phylogenetic_alt,
-                          bioenv, beta_group_significance, beta_correlation,
+                          bioenv, beta_group_significance, mantel,
                           beta_rarefaction)
 from q2_diversity._beta._visualizer import (_get_distance_boxplot_data,
-                                            _metadata_distance,
                                             _get_multiple_rarefaction)
 
 
@@ -727,171 +726,177 @@ class BetaGroupSignificanceTests(unittest.TestCase):
         self.assertEqual(obs[1], exp_labels)
 
 
-class BetaCorrelationTests(unittest.TestCase):
+class TestMantel(unittest.TestCase):
+    def setUp(self):
+        self.dm1 = skbio.DistanceMatrix([[0.00, 0.25, 0.25],
+                                         [0.25, 0.00, 0.00],
+                                         [0.25, 0.00, 0.00]],
+                                        ids=['sample1', 'sample2', 'sample3'])
 
-    def test_metadata_distance_int(self):
-        md = pd.Series([1, 2, 3], name='number',
-                       index=['sample1', 'sample2', 'sample3'])
-        exp = skbio.DistanceMatrix([[0, 1, 2],
-                                    [1, 0, 1],
-                                    [2, 1, 0]],
-                                   ids=['sample1', 'sample2', 'sample3'])
-        obs = _metadata_distance(md)
-        self.assertEqual(exp, obs)
+        # Positive correlation with `dm1`
+        self.dm2 = skbio.DistanceMatrix([[0.00, 1.00, 2.00],
+                                         [1.00, 0.00, 1.00],
+                                         [2.00, 1.00, 0.00]],
+                                        ids=['sample1', 'sample2', 'sample3'])
 
-    def test_metadata_distance_float(self):
-        md = pd.Series([1.5, 2.0, 3.0], name='number',
-                       index=['sample1', 'sample2', 'sample3'])
-        exp = skbio.DistanceMatrix([[0.0, 0.5, 1.5],
-                                    [0.5, 0.0, 1.0],
-                                    [1.5, 1.0, 0.0]],
-                                   ids=['sample1', 'sample2', 'sample3'])
-        obs = _metadata_distance(md)
-        self.assertEqual(exp, obs)
+        # Perfect negative correlation with `dm1`
+        self.dm3 = skbio.DistanceMatrix([[0.00, 0.00, 0.00],
+                                         [0.00, 0.00, 0.25],
+                                         [0.00, 0.25, 0.00]],
+                                        ids=['sample1', 'sample2', 'sample3'])
 
-    def test_metadata_distance_one_sample(self):
-        md = pd.Series([1.5], name='number',
-                       index=['sample1'])
-        exp = skbio.DistanceMatrix([[0.0]],
-                                   ids=['sample1'])
-        obs = _metadata_distance(md)
-        self.assertEqual(exp, obs)
+        self.dm2_reordered = skbio.DistanceMatrix(
+            [[0.00, 2.00, 1.00],
+             [2.00, 0.00, 1.00],
+             [1.00, 1.00, 0.00]],
+            ids=['sample3', 'sample1', 'sample2'])
 
-    def test_basic(self):
-        dm = skbio.DistanceMatrix([[0.00, 0.25, 0.25],
-                                   [0.25, 0.00, 0.00],
-                                   [0.25, 0.00, 0.00]],
-                                  ids=['sample1', 'sample2', 'sample3'])
-        md = qiime2.MetadataCategory(
-            pd.Series([1, 2, 3], name='number',
-                      index=['sample1', 'sample2', 'sample3']))
+        self.mismatched_dm = skbio.DistanceMatrix(
+            [[0.0, 0.0, 0.0, 0.0, 0.0],
+             [0.0, 0.0, 1.0, 2.0, 3.0],
+             [0.0, 1.0, 0.0, 1.0, 2.0],
+             [0.0, 2.0, 1.0, 0.0, 1.0],
+             [0.0, 3.0, 2.0, 1.0, 0.0]],
+            ids=['foo', 'sample1', 'sample2', 'sample3', 'x'])
 
-        with tempfile.TemporaryDirectory() as output_dir:
-            beta_correlation(output_dir, dm, md)
-            index_fp = os.path.join(output_dir, 'index.html')
-            self.assertTrue(os.path.exists(index_fp))
-            # all expected plots are generated
-            self.assertTrue(os.path.exists(
-                            os.path.join(output_dir,
-                                         'beta-correlation-scatter.pdf')))
-            self.assertTrue(os.path.exists(
-                            os.path.join(output_dir,
-                                         'beta-correlation-scatter.png')))
-            self.assertTrue('Mantel test results' in open(index_fp).read())
-            self.assertTrue('Spearman rho' in open(index_fp).read())
-            self.assertFalse('Warning' in open(index_fp).read())
+        self.output_dir_obj = tempfile.TemporaryDirectory(
+                prefix='q2-diversity-test-temp-')
+        self.output_dir = self.output_dir_obj.name
 
-    def test_warning_on_extra_metadata(self):
-        dm = skbio.DistanceMatrix([[0.00, 0.25, 0.25],
-                                   [0.25, 0.00, 0.00],
-                                   [0.25, 0.00, 0.00]],
-                                  ids=['sample1', 'sample2', 'sample3'])
-        md = qiime2.MetadataCategory(
-            pd.Series([1, 2, 3, 4], name='number',
-                      index=['sample1', 'sample2', 'sample3', 'sample4']))
+    def tearDown(self):
+        self.output_dir_obj.cleanup()
 
-        with tempfile.TemporaryDirectory() as output_dir:
-            beta_correlation(output_dir, dm, md)
-            index_fp = os.path.join(output_dir, 'index.html')
-            self.assertTrue(os.path.exists(index_fp))
-            # all expected plots are generated
-            self.assertTrue(os.path.exists(
-                            os.path.join(output_dir,
-                                         'beta-correlation-scatter.pdf')))
-            self.assertTrue(os.path.exists(
-                            os.path.join(output_dir,
-                                         'beta-correlation-scatter.png')))
-            self.assertTrue('Mantel test results' in open(index_fp).read())
-            self.assertTrue('Spearman rho' in open(index_fp).read())
-            self.assertTrue('Warning' in open(index_fp).read())
+    def assertBasicVizValidity(self, viz_dir, sample_size, method='spearman',
+                               permutations=999, label1='Distance Matrix 1',
+                               label2='Distance Matrix 2',
+                               mismatched_ids=None, exp_test_stat=None,
+                               exp_p_value=None):
+        index_fp = os.path.join(viz_dir, 'index.html')
+        self.assertTrue(os.path.exists(index_fp))
 
-    def test_error_on_missing_metadata(self):
-        dm = skbio.DistanceMatrix([[0.00, 0.25, 0.25],
-                                   [0.25, 0.00, 0.00],
-                                   [0.25, 0.00, 0.00]],
-                                  ids=['sample1', 'sample2', 'sample3'])
-        md = qiime2.MetadataCategory(
-            pd.Series([1, 2], name='number',
-                      index=['sample1', 'sample2']))
+        with open(index_fp, 'r') as fh:
+            index_contents = fh.read()
 
-        with tempfile.TemporaryDirectory() as output_dir:
-            with self.assertRaisesRegex(ValueError, 'no data: sample3'):
-                beta_correlation(output_dir, dm, md)
+        self.assertIn('Mantel test results', index_contents)
+        self.assertIn('<td>%d</td>' % sample_size, index_contents)
+        self.assertIn('<td>%d</td>' % permutations, index_contents)
 
-    def test_error_on_nan_metadata(self):
-        dm = skbio.DistanceMatrix([[0.00, 0.25, 0.25],
-                                   [0.25, 0.00, 0.00],
-                                   [0.25, 0.00, 0.00]],
-                                  ids=['sample1', 'sample2', 'sample3'])
-        md = qiime2.MetadataCategory(
-            pd.Series([1.0, 2.0, ''], name='number',
-                      index=['sample1', 'sample2', 'sample3']))
+        method_labels = {'spearman': "Spearman rho", 'pearson': "Pearson r"}
+        self.assertIn(method_labels[method], index_contents)
 
-        with tempfile.TemporaryDirectory() as output_dir:
-            with self.assertRaisesRegex(ValueError, 'no data: sample3'):
-                beta_correlation(output_dir, dm, md)
+        if mismatched_ids is None:
+            self.assertNotIn('Warning:', index_contents)
+        else:
+            self.assertIn('Warning', index_contents)
+            self.assertIn('%d ID(s)' % len(mismatched_ids), index_contents)
+            self.assertIn('remaining <strong>%d IDs</strong>' % sample_size,
+                          index_contents)
+            self.assertIn(', '.join(sorted(mismatched_ids)), index_contents)
 
-    def test_error_on_non_numeric_metadata(self):
-        dm = skbio.DistanceMatrix([[0.00, 0.25, 0.25],
-                                   [0.25, 0.00, 0.00],
-                                   [0.25, 0.00, 0.00]],
-                                  ids=['sample1', 'sample2', 'sample3'])
-        md = qiime2.MetadataCategory(
-            pd.Series([1.0, 2.0, 'hello-world'], name='number',
-                      index=['sample1', 'sample2', 'sample3']))
+        if exp_test_stat is not None:
+            self.assertIn('<td>%r</td>' % exp_test_stat, index_contents)
 
-        with tempfile.TemporaryDirectory() as output_dir:
-            with self.assertRaisesRegex(ValueError, 'Non-numeric data was'):
-                beta_correlation(output_dir, dm, md)
+        if exp_p_value is not None:
+            self.assertIn('<td>%s</td>' % exp_p_value, index_contents)
 
-    def test_basic_pearson(self):
-        dm = skbio.DistanceMatrix([[0.00, 0.25, 0.25],
-                                   [0.25, 0.00, 0.00],
-                                   [0.25, 0.00, 0.00]],
-                                  ids=['sample1', 'sample2', 'sample3'])
-        md = qiime2.MetadataCategory(
-            pd.Series([1, 2, 3], name='number',
-                      index=['sample1', 'sample2', 'sample3']))
+        svg_fp = os.path.join(viz_dir, 'mantel-scatter.svg')
+        self.assertTrue(os.path.exists(svg_fp))
 
-        with tempfile.TemporaryDirectory() as output_dir:
-            beta_correlation(output_dir, dm, md, method='pearson')
-            index_fp = os.path.join(output_dir, 'index.html')
-            self.assertTrue(os.path.exists(index_fp))
-            # all expected plots are generated
-            self.assertTrue(os.path.exists(
-                            os.path.join(output_dir,
-                                         'beta-correlation-scatter.pdf')))
-            self.assertTrue(os.path.exists(
-                            os.path.join(output_dir,
-                                         'beta-correlation-scatter.png')))
-            self.assertTrue('Mantel test results' in open(index_fp).read())
-            self.assertTrue('Pearson r' in open(index_fp).read())
-            self.assertFalse('Warning' in open(index_fp).read())
+        with open(svg_fp, 'r') as fh:
+            svg_contents = fh.read()
 
-    def test_basic_alt_permutations(self):
-        dm = skbio.DistanceMatrix([[0.00, 0.25, 0.25],
-                                   [0.25, 0.00, 0.00],
-                                   [0.25, 0.00, 0.00]],
-                                  ids=['sample1', 'sample2', 'sample3'])
-        md = qiime2.MetadataCategory(
-            pd.Series([1, 2, 3], name='number',
-                      index=['sample1', 'sample2', 'sample3']))
+        self.assertIn('Pairwise Distance (%s)' % label1, svg_contents)
+        self.assertIn('Pairwise Distance (%s)' % label2, svg_contents)
 
-        with tempfile.TemporaryDirectory() as output_dir:
-            beta_correlation(output_dir, dm, md, permutations=42)
-            index_fp = os.path.join(output_dir, 'index.html')
-            self.assertTrue(os.path.exists(index_fp))
-            # all expected plots are generated
-            self.assertTrue(os.path.exists(
-                            os.path.join(output_dir,
-                                         'beta-correlation-scatter.pdf')))
-            self.assertTrue(os.path.exists(
-                            os.path.join(output_dir,
-                                         'beta-correlation-scatter.png')))
-            self.assertTrue('Mantel test results' in open(index_fp).read())
-            self.assertTrue('<td>42</td>' in open(index_fp).read())
-            self.assertTrue('Spearman rho' in open(index_fp).read())
-            self.assertFalse('Warning' in open(index_fp).read())
+    def test_defaults_positive_correlation(self):
+        mantel(self.output_dir, self.dm1, self.dm2)
+
+        self.assertBasicVizValidity(self.output_dir, 3, exp_test_stat=0.5,
+                                    exp_p_value=1)
+
+    def test_defaults_negative_correlation(self):
+        mantel(self.output_dir, self.dm1, self.dm3)
+
+        # p-value will be stochastic with this dataset so not asserting its
+        # value.
+        self.assertBasicVizValidity(self.output_dir, 3, exp_test_stat=-1)
+
+    def test_defaults_reverse_comparison(self):
+        # Comparing X to Y should be the same as comparing Y to X.
+        mantel(self.output_dir, self.dm2, self.dm1)
+
+        self.assertBasicVizValidity(self.output_dir, 3, exp_test_stat=0.5,
+                                    exp_p_value=1)
+
+    def test_defaults_reordered(self):
+        # Order of IDs in distance matrices shouldn't change the results.
+        mantel(self.output_dir, self.dm1, self.dm2_reordered)
+
+        self.assertBasicVizValidity(self.output_dir, 3, exp_test_stat=0.5,
+                                    exp_p_value=1)
+
+    def test_pearson(self):
+        mantel(self.output_dir, self.dm1, self.dm2, method='pearson')
+
+        self.assertBasicVizValidity(self.output_dir, 3, method='pearson',
+                                    exp_test_stat=0.5, exp_p_value=1)
+
+    def test_alt_permutations(self):
+        mantel(self.output_dir, self.dm1, self.dm2, permutations=42)
+
+        self.assertBasicVizValidity(self.output_dir, 3, permutations=42,
+                                    exp_test_stat=0.5, exp_p_value=1)
+
+    def test_zero_permutations(self):
+        mantel(self.output_dir, self.dm1, self.dm2, permutations=0)
+
+        self.assertBasicVizValidity(self.output_dir, 3, permutations=0,
+                                    exp_test_stat=0.5, exp_p_value='NaN')
+
+    def test_alt_labels(self):
+        mantel(self.output_dir, self.dm1, self.dm2, label1='Peanut',
+               label2='Milo')
+
+        self.assertBasicVizValidity(self.output_dir, 3, label1='Peanut',
+                                    label2='Milo', exp_test_stat=0.5,
+                                    exp_p_value=1)
+
+    def test_error_on_sample_mismatch(self):
+        with self.assertRaisesRegex(ValueError,
+                                    'intersect_ids.*mismatches.*\n\nfoo, x'):
+            mantel(self.output_dir, self.dm1, self.mismatched_dm)
+
+    def test_warn_on_sample_mismatch(self):
+        mantel(self.output_dir, self.dm1, self.mismatched_dm,
+               intersect_ids=True)
+
+        self.assertBasicVizValidity(self.output_dir, 3,
+                                    mismatched_ids={'foo', 'x'},
+                                    exp_test_stat=0.5, exp_p_value=1)
+
+    def test_warn_on_sample_mismatch_reverse_comparison(self):
+        # Comparing X to Y should be the same as comparing Y to X.
+        mantel(self.output_dir, self.mismatched_dm, self.dm1,
+               intersect_ids=True)
+
+        self.assertBasicVizValidity(self.output_dir, 3,
+                                    mismatched_ids={'foo', 'x'},
+                                    exp_test_stat=0.5, exp_p_value=1)
+
+    def test_same_matrices(self):
+        mantel(self.output_dir, self.dm1, self.dm1)
+
+        self.assertBasicVizValidity(self.output_dir, 3, exp_test_stat=1,
+                                    exp_p_value=1)
+
+    def test_same_filtered_matrices(self):
+        # These two matrices filter down to the same data.
+        mantel(self.output_dir, self.dm2, self.mismatched_dm,
+               intersect_ids=True)
+
+        self.assertBasicVizValidity(self.output_dir, 3,
+                                    mismatched_ids={'foo', 'x'},
+                                    exp_test_stat=1, exp_p_value=1)
 
 
 class BetaRarefactionTests(unittest.TestCase):

@@ -16,7 +16,6 @@ import functools
 import skbio
 import skbio.diversity
 import biom
-import scipy.spatial.distance
 import numpy
 import pandas as pd
 import seaborn as sns
@@ -276,75 +275,79 @@ def _get_multiple_rarefaction(beta_func, metric, iterations, table,
     return distance_matrices
 
 
-def _metadata_distance(metadata: pd.Series) -> skbio.DistanceMatrix:
-    # This code is derived from @jairideout's scikit-bio cookbook recipe,
-    # "Exploring Microbial Community Diversity"
-    # https://github.com/biocore/scikit-bio-cookbook
-    distances = scipy.spatial.distance.pdist(
-        metadata.values[:, numpy.newaxis], metric='euclidean')
-    return skbio.DistanceMatrix(distances, ids=metadata.index)
-
-
-def beta_correlation(output_dir: str,
-                     distance_matrix: skbio.DistanceMatrix,
-                     metadata: qiime2.MetadataCategory,
-                     method: str='spearman',
-                     permutations: int=999) -> None:
+def mantel(output_dir: str, dm1: skbio.DistanceMatrix,
+           dm2: skbio.DistanceMatrix, method: str='spearman',
+           permutations: int=999, intersect_ids: bool=False,
+           label1: str='Distance Matrix 1',
+           label2: str='Distance Matrix 2') -> None:
     test_statistics = {'spearman': 'rho', 'pearson': 'r'}
     alt_hypothesis = 'two-sided'
-    try:
-        metadata = pd.to_numeric(metadata.to_series(), errors='raise')
-    except ValueError as e:
-        raise ValueError('Only numeric data can be used with the Mantel test. '
-                         'Non-numeric data was encountered in the sample '
-                         'metadata. Orignal error message follows:\n%s' %
-                         str(e))
 
-    initial_metadata_length = len(metadata)
-    metadata = metadata.loc[list(distance_matrix.ids)]
-    metadata = metadata.replace(r'', numpy.nan).dropna()
-    filtered_metadata_length = len(metadata)
+    # The following code to handle mismatched IDs, and subsequently filter the
+    # distance matrices, is not technically necessary because skbio's mantel
+    # function will raise an error on mismatches with `strict=True`, and will
+    # handle intersection if `strict=False`. However, we need to handle the ID
+    # matching explicitly to find *which* IDs are mismatched -- the error
+    # message coming from scikit-bio doesn't describe those. We also need to
+    # have the mismatched IDs to display as a warning in the viz if
+    # `intersect_ids=True`. Finally, the distance matrices are explicitly
+    # filtered to matching IDs only because their data are used elsewhere in
+    # this function (e.g. extracting scatter plot data).
 
-    ids_with_missing_metadata = set(distance_matrix.ids) - set(metadata.index)
-    if len(ids_with_missing_metadata) > 0:
-        raise ValueError('All samples in distance matrix must be present '
-                         'and contain data in the sample metadata. The '
-                         'following samples were present in the distance '
-                         'matrix, but were missing from the sample metadata '
-                         'or had no data: %s' %
-                         ', '.join(ids_with_missing_metadata))
+    # Find the symmetric difference between ID sets.
+    ids1 = set(dm1.ids)
+    ids2 = set(dm2.ids)
+    mismatched_ids = ids1 ^ ids2
 
-    metadata_distances = _metadata_distance(metadata)
-    r, p, n = skbio.stats.distance.mantel(
-        distance_matrix, metadata_distances, method=method,
-        permutations=permutations, alternative=alt_hypothesis, strict=True)
+    if not intersect_ids and mismatched_ids:
+        raise ValueError(
+            "The following ID(s) are not contained in both distance "
+            "matrices. Use `intersect_ids` to discard these mismatches "
+            "and apply the Mantel test to only those IDs that are found "
+            "in both distance matrices.\n\n%s"
+            % ', '.join(sorted(mismatched_ids)))
 
-    result = pd.Series([method.title(), n, permutations, alt_hypothesis,
-                        metadata.name, r, p],
+    if mismatched_ids:
+        matched_ids = ids1 & ids2
+        # Run in `strict` mode because the matches should all be found in both
+        # matrices.
+        dm1 = dm1.filter(matched_ids, strict=True)
+        dm2 = dm2.filter(matched_ids, strict=True)
+
+    # Run in `strict` mode because all IDs should be matched at this point.
+    r, p, sample_size = skbio.stats.distance.mantel(
+            dm1, dm2, method=method, permutations=permutations,
+            alternative=alt_hypothesis, strict=True)
+
+    result = pd.Series([method.title(), sample_size, permutations,
+                       alt_hypothesis, r, p],
                        index=['Method', 'Sample size', 'Permutations',
-                              'Alternative hypothesis', 'Metadata category',
+                              'Alternative hypothesis',
                               '%s %s' % (method.title(),
                                          test_statistics[method]),
                               'p-value'],
                        name='Mantel test results')
-    result_html = q2templates.df_to_html(result.to_frame())
+    table_html = q2templates.df_to_html(result.to_frame())
 
+    # We know the distance matrices have matching ID sets at this point, so we
+    # can safely generate all pairs of IDs using one of the matrices' ID sets
+    # (it doesn't matter which one).
     scatter_data = []
-    for id1, id2 in itertools.combinations(distance_matrix.ids, 2):
-        scatter_data.append((distance_matrix[id1, id2],
-                             metadata_distances[id1, id2]))
-    x = 'Input distance'
-    y = 'Euclidean distance of\n%s' % metadata.name
+    for id1, id2 in itertools.combinations(dm1.ids, 2):
+        scatter_data.append((dm1[id1, id2], dm2[id1, id2]))
+
     plt.figure()
+    x = 'Pairwise Distance (%s)' % label1
+    y = 'Pairwise Distance (%s)' % label2
     scatter_data = pd.DataFrame(scatter_data, columns=[x, y])
     sns.regplot(x=x, y=y, data=scatter_data, fit_reg=False)
-    plt.savefig(os.path.join(output_dir, 'beta-correlation-scatter.png'))
-    plt.savefig(os.path.join(output_dir, 'beta-correlation-scatter.pdf'))
+    plt.savefig(os.path.join(output_dir, 'mantel-scatter.svg'))
 
+    context = {
+        'table': table_html,
+        'sample_size': sample_size,
+        'mismatched_ids': mismatched_ids
+    }
     index = os.path.join(
-        TEMPLATES, 'beta_correlation_assets', 'index.html')
-    q2templates.render(index, output_dir, context={
-        'initial_metadata_length': initial_metadata_length,
-        'filtered_metadata_length': filtered_metadata_length,
-        'result': result_html
-    })
+        TEMPLATES, 'mantel_assets', 'index.html')
+    q2templates.render(index, output_dir, context=context)

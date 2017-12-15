@@ -55,9 +55,10 @@ def core_metrics_phylogenetic(ctx, table, phylogeny, sampling_depth, metadata,
                                           metric='faith_pd')
 
     dms = []
-    for metric in 'unweighted_unifrac', 'weighted_unifrac':
-        dms += beta_phylogenetic(table=cr.rarefied_table, phylogeny=phylogeny,
-                                 metric=metric, n_jobs=n_jobs)
+    dms += beta_phylogenetic(table=cr.rarefied_table, phylogeny=phylogeny,
+                             metric='unweighted_unifrac', n_jobs=n_jobs)
+    dms += beta_phylogenetic(table=cr.rarefied_table, phylogeny=phylogeny,
+                             metric='weighted_unifrac')
 
     pcoas = []
     for dm in dms:

@@ -173,6 +173,12 @@ def alpha_correlation(output_dir: str,
             "visualizer requires at least one numeric metadata column to "
             "execute.")
 
+    # save out metadata for download in viz
+    alpha_diversity.index.name = 'id'
+    alpha = qiime2.Metadata(alpha_diversity.to_frame())
+    md = metadata.merge(alpha)
+    md.save(os.path.join(output_dir, 'metadata.tsv'))
+
     filenames = []
     for column in metadata.columns:
         metadata_column = metadata.get_column(column)

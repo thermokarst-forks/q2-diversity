@@ -8,7 +8,7 @@
 
 from qiime2.plugin import (Plugin, Str, Properties, Choices, Int, Bool, Range,
                            Float, Set, Visualization, Metadata, MetadataColumn,
-                           Categorical, Citations)
+                           Categorical, Numeric, Citations)
 
 import q2_diversity
 from q2_diversity import _alpha as alpha
@@ -18,7 +18,6 @@ from q2_types.distance_matrix import DistanceMatrix
 from q2_types.sample_data import AlphaDiversity, SampleData
 from q2_types.tree import Phylogeny, Rooted
 from q2_types.ordination import PCoAResults
-
 
 citations = Citations.load('citations.bib', package='q2_diversity')
 
@@ -381,6 +380,53 @@ plugin.pipelines.register_function(
     name='Core diversity metrics (non-phylogenetic)',
     description=("Applies a collection of diversity metrics "
                  "(non-phylogenetic) to a feature table.")
+)
+
+
+plugin.pipelines.register_function(
+    function=q2_diversity.beta_correlation,
+    inputs={'distance_matrix': DistanceMatrix},
+    parameters={
+        'metadata': MetadataColumn[Numeric],
+        'method': Str % Choices(['spearman', 'pearson']),
+        'permutations': Int % Range(0, None),
+        'intersect_ids': Bool,
+        'label1': Str,
+        'label2': Str
+    },
+    outputs=[('metadata_distance_matrix', DistanceMatrix),
+             ('mantel_scatter_visualization', Visualization)],
+    input_descriptions={
+        'distance_matrix': 'Matrix of distances between pairs of samples.'},
+    parameter_descriptions={
+        'metadata': 'Numeric metadata column from which to compute pairwise '
+                    'Euclidean distances',
+        'method': 'The correlation test to be applied in the Mantel test.',
+        'permutations': 'The number of permutations to be run when computing '
+                        'p-values. Supplying a value of zero will disable '
+                        'permutation testing and p-values will not be '
+                        'calculated (this results in *much* quicker execution '
+                        'time if p-values are not desired).',
+        'intersect_ids': 'If supplied, IDs that are not found in both '
+                         'distance matrices will be discarded before applying '
+                         'the Mantel test. Default behavior is to error on '
+                         'any mismatched IDs.',
+        'label1': 'Label for `distance_matrix` in the output visualization.',
+        'label2': 'Label for `metadata_distance_matrix` in the output '
+                  'visualization.'
+    },
+    output_descriptions={
+        'metadata_distance_matrix': 'The Distance Matrix produced from the '
+                                    'metadata column and used in the mantel '
+                                    'test',
+        'mantel_scatter_visualization': 'Scatter plot rendering of the mantel'
+                                        'test results'},
+    name='Beta diversity correlation',
+    description=('Create a distance matrix from a numeric metadata column and '
+                 'apply a two-sided Mantel test to identify correlation '
+                 'between two distance matrices. Actions used internally: '
+                 '`distance-matrix` from q2-metadata and `mantel` from '
+                 'q2-diversity.')
 )
 
 plugin.methods.register_function(

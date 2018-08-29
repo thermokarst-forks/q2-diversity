@@ -20,6 +20,9 @@ from q2_types.tree import NewickFormat
 
 from functools import partial
 
+from skbio.stats.composition import clr
+from scipy.spatial.distance import euclidean
+
 
 # We should consider moving these functions to scikit-bio. They're part of
 # the private API here for now.
@@ -39,7 +42,7 @@ def non_phylogenetic_metrics():
             'correlation', 'hamming', 'jaccard', 'chebyshev', 'canberra',
             'braycurtis', 'mahalanobis', 'yule', 'matching', 'dice',
             'kulsinski', 'rogerstanimoto', 'russellrao', 'sokalmichener',
-            'sokalsneath', 'wminkowski'}
+            'sokalsneath', 'wminkowski', 'aitchison'}
 
 
 def all_metrics():
@@ -110,19 +113,31 @@ def beta_phylogenetic_alt(table: BIOMV210Format, phylogeny: NewickFormat,
              variance_adjusted=variance_adjusted, bypass_tips=bypass_tips)
 
 
-def beta(table: biom.Table, metric: str, n_jobs: int=1)-> skbio.DistanceMatrix:
-    if metric not in non_phylogenetic_metrics():
+def beta(table: biom.Table, metric: str,
+         pseudocount: int=1, n_jobs: int=1)-> skbio.DistanceMatrix:
+
+    if not (metric in non_phylogenetic_metrics()):
         raise ValueError("Unknown metric: %s" % metric)
+
+    counts = table.matrix_data.toarray().T
+
+    def aitchison(x, y, **kwds):
+        return euclidean(clr(x), clr(y))
+
+    if metric == 'aitchison':
+        counts += pseudocount
+        metric = aitchison
+
     if table.is_empty():
         raise ValueError("The provided table object is empty")
 
-    counts = table.matrix_data.toarray().astype(int).T
     sample_ids = table.ids(axis='sample')
 
     return skbio.diversity.beta_diversity(
         metric=metric,
         counts=counts,
         ids=sample_ids,
+        validate=True,
         pairwise_func=sklearn.metrics.pairwise_distances,
         n_jobs=n_jobs
     )

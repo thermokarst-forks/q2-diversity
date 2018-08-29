@@ -30,7 +30,6 @@ sklearn_n_jobs_description = (
     'are used. (Description from sklearn.metrics.pairwise_distances)'
 )
 
-
 plugin = Plugin(
     name='diversity',
     version=q2_diversity.__version__,
@@ -72,7 +71,6 @@ plugin.methods.register_function(
         citations['lozupone2005unifrac'],
         citations['lozupone2007quantitative']]
 )
-
 
 plugin.methods.register_function(
     function=q2_diversity.beta_phylogenetic_alt,
@@ -131,7 +129,6 @@ plugin.methods.register_function(
         citations['chang2011variance'],
         citations['chen2012associating']]
 )
-
 
 plugin.methods.register_function(
     function=q2_diversity.beta,
@@ -205,13 +202,33 @@ plugin.methods.register_function(
 plugin.methods.register_function(
     function=q2_diversity.pcoa,
     inputs={'distance_matrix': DistanceMatrix},
-    parameters={},
+    parameters={
+        'number_of_dimensions': Int % Range(1, None)
+    },
     outputs=[('pcoa', PCoAResults)],
     input_descriptions={
         'distance_matrix': ('The distance matrix on which PCoA should be '
                             'computed.')
     },
-    parameter_descriptions={},
+    parameter_descriptions={
+        'number_of_dimensions': "Dimensions to reduce the distance matrix to. "
+                                "This number determines how many "
+                                "eigenvectors and eigenvalues are returned,"
+                                "and influences the choice of algorithm used "
+                                "to compute them. "
+                                "By default, uses the default "
+                                "eigendecomposition method, SciPy's eigh, "
+                                "which computes all eigenvectors "
+                                "and eigenvalues in an exact manner. For very "
+                                "large matrices, this is expected to be slow. "
+                                "If a value is specified for this parameter, "
+                                "then the fast, heuristic "
+                                "eigendecomposition algorithm fsvd "
+                                "is used, which only computes and returns the "
+                                "number of dimensions specified, but suffers "
+                                "some degree of accuracy loss, the magnitude "
+                                "of which varies across different datasets."
+    },
     output_descriptions={'pcoa': 'The resulting PCoA matrix.'},
     name='Principal Coordinate Analysis',
     description=("Apply principal coordinate analysis.")
@@ -402,7 +419,6 @@ plugin.pipelines.register_function(
     description=("Applies a collection of diversity metrics "
                  "(non-phylogenetic) to a feature table.")
 )
-
 
 plugin.pipelines.register_function(
     function=q2_diversity.beta_correlation,
@@ -602,7 +618,6 @@ plugin.visualizers.register_function(
         citations['pearson1895note'],
         citations['spearman1904proof']]
 )
-
 
 alpha_correlation_methods = \
     list(q2_diversity._alpha._visualizer._alpha_correlation_fns)

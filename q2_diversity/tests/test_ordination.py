@@ -9,6 +9,7 @@
 import unittest
 
 import skbio
+from skbio.util import assert_ordination_results_equal
 import pandas as pd
 
 from q2_diversity import pcoa, pcoa_biplot
@@ -27,6 +28,18 @@ class PCoATests(unittest.TestCase):
         observed = pcoa(self.dm)
         skbio.util.assert_ordination_results_equal(
             observed, self.ordination, ignore_directionality=True)
+
+    def test_pcoa_fsvd(self):
+        # Run fsvd, computing all dimensions.
+        fsvd_result = pcoa(self.dm,
+                           number_of_dimensions=self.dm.data.shape[0])
+
+        # Run eigh, which computes all dimensions by default.
+        eigh_result = pcoa(self.dm)
+
+        assert_ordination_results_equal(fsvd_result, eigh_result,
+                                        ignore_directionality=True,
+                                        ignore_method_names=True)
 
     def test_pcoa_biplot(self):
         features = pd.DataFrame([[1, 0], [3, 0.1], [8, -0.4]],

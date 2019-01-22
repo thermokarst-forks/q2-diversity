@@ -65,7 +65,13 @@ def beta_phylogenetic(table: BIOMV210Format, phylogeny: NewickFormat,
                          ' of metric is generalized_unifrac')
 
     # this behaviour is undefined, so let's avoid a seg fault
-    cpus = psutil.cpu_count(logical=False)
+    try:
+        # https://psutil.readthedocs.io/en/latest/index.html#psutil.cpu_count
+        # `Process.cpu_affinity` may not be available on all systems, if not,
+        # fall back to the original cpu counting mechanism.
+        cpus = len(psutil.Process().cpu_affinity())
+    except AttributeError:
+        cpus = psutil.cpu_count(logical=False)
     if n_jobs > cpus:
         raise ValueError('The value of n_jobs cannot exceed the number of '
                          'processors (%d) available in this system.' % cpus)

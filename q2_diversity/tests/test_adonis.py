@@ -75,6 +75,15 @@ class AdonisTests(TestPluginBase):
             with tempfile.TemporaryDirectory() as temp_dir_name:
                 adonis(temp_dir_name, self.dm, md, 'letter+fakecolumn')
 
+    def test_metadata_index_rename(self):
+        md = qiime2.Metadata(pd.DataFrame(
+            [[1, 'a'], [1, 'b'], [2, 'b'], [2, 'a']],
+            columns=['number', 'letter'],
+            index=pd.Index(['sample1', 'sample2', 'sample3', 'F'],
+                           name='#SampleID')))
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            adonis(temp_dir_name, self.dm, md, 'letter+number')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -345,7 +345,9 @@ def adonis(output_dir: str,
     dm_ids = distance_matrix.ids
     _validate_metadata_is_superset(metadata_ids, set(dm_ids))
     # filter ids. ids must be in same order as dm
-    metadata = qiime2.Metadata(metadata.to_dataframe().reindex(dm_ids))
+    filtered_md = metadata.to_dataframe().reindex(dm_ids)
+    filtered_md.index.name = 'sample-id'
+    metadata = qiime2.Metadata(filtered_md)
 
     # Validate formula
     terms = ModelDesc.from_formula(formula)

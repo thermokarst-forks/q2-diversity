@@ -22,6 +22,7 @@ from functools import partial
 
 from skbio.stats.composition import clr
 from scipy.spatial.distance import euclidean
+from scipy.spatial.distance import jensenshannon
 
 
 def phylogenetic_metrics_dict():
@@ -40,7 +41,8 @@ def non_phylogenetic_metrics():
             'correlation', 'hamming', 'jaccard', 'chebyshev', 'canberra',
             'braycurtis', 'mahalanobis', 'yule', 'matching', 'dice',
             'kulsinski', 'rogerstanimoto', 'russellrao', 'sokalmichener',
-            'sokalsneath', 'wminkowski', 'aitchison', 'canberra_adkins'}
+            'sokalsneath', 'wminkowski', 'aitchison', 'canberra_adkins',
+            'jensenshannon'}
 
 
 def all_metrics():
@@ -109,11 +111,16 @@ def beta(table: biom.Table, metric: str,
 
         return (1. / nnz) * np.sum(np.abs(x_ - y_) / (x_ + y_))
 
+    def jensen_shannon(x, y, **kwds):
+        return jensenshannon(x, y)
+
     if metric == 'aitchison':
         counts += pseudocount
         metric = aitchison
     elif metric == 'canberra_adkins':
         metric = canberra_adkins
+    elif metric == 'jensenshannon':
+        metric = jensen_shannon
 
     if table.is_empty():
         raise ValueError("The provided table object is empty")

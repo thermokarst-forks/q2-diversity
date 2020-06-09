@@ -20,9 +20,11 @@ import qiime2
 from statsmodels.sandbox.stats.multicomp import multipletests
 import q2templates
 import biom
-import skbio
 import itertools
 from q2_feature_table import rarefy
+from q2_types.feature_table import BIOMV210Format
+from qiime2.plugin.util import transform
+from q2_types.tree import NewickFormat
 
 from ._method import (non_phylogenetic_metrics, phylogenetic_metrics,
                       alpha, alpha_phylogenetic)
@@ -293,7 +295,11 @@ def _compute_rarefaction_data(feature_table, min_depth, max_depth, steps,
         rt = rarefy(feature_table, d)
         for m in metrics:
             if m in phylogenetic_metrics():
-                vector = alpha_phylogenetic(table=rt, metric=m,
+                # need a new rarefied table here in case a phylogenetic
+                # metric comes before a non-phylogenetic metric
+                rt_p = transform(rt, to_type=BIOMV210Format,
+                                 from_type=biom.Table)
+                vector = alpha_phylogenetic(table=rt_p, metric=m,
                                             phylogeny=phylogeny)
             else:
                 vector = alpha(table=rt, metric=m)
@@ -302,7 +308,7 @@ def _compute_rarefaction_data(feature_table, min_depth, max_depth, steps,
 
 
 def alpha_rarefaction(output_dir: str, table: biom.Table, max_depth: int,
-                      phylogeny: skbio.TreeNode = None, metrics: set = None,
+                      phylogeny: NewickFormat = None, metrics: set = None,
                       metadata: qiime2.Metadata = None, min_depth: int = 1,
                       steps: int = 10, iterations: int = 10) -> None:
 

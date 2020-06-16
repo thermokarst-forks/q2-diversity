@@ -655,8 +655,8 @@ plugin.visualizers.register_function(
                 'the same; the distance matrices will be reordered before '
                 'applying the Mantel test.\n\nSee the scikit-bio docs for '
                 'more details about the Mantel test:\n\n'
-                'http://scikit-bio.org/docs/latest/generated/generated/'
-                'skbio.stats.distance.mantel.html',
+                'http://scikit-bio.org/docs/latest/generated/'
+                'skbio.stats.distance.mantel',
     input_descriptions={
         'dm1': 'Matrix of distances between pairs of samples.',
         'dm2': 'Matrix of distances between pairs of samples.'

@@ -22,8 +22,8 @@ import qiime2
 from qiime2.plugin.testing import TestPluginBase
 
 
-from q2_diversity import (beta, beta_phylogenetic,
-                          bioenv, beta_group_significance, mantel)
+from qiime2 import Artifact
+from q2_diversity import (bioenv, beta_group_significance, mantel)
 from q2_diversity._beta._visualizer import _get_distance_boxplot_data
 
 
@@ -31,11 +31,38 @@ class BetaDiversityTests(TestPluginBase):
     # Note that some of these tests replicate the cases in biocore/unifrac
     package = 'q2_diversity.tests'
 
-    def test_beta(self):
+    def setUp(self):
+        super().setUp()
+        self.beta = self.plugin.pipelines['beta']
+        self.beta_phylogenetic = self.plugin.pipelines['beta_phylogenetic']
+
+        two_feature_table = self.get_data_path('two_feature_table.biom')
+        self.two_feature_table = Artifact.import_data(
+                'FeatureTable[Frequency]',
+                two_feature_table)
+
+        three_feature_tree = self.get_data_path('three_feature.tree')
+        self.three_feature_tree = Artifact.import_data('Phylogeny[Rooted]',
+                                                       three_feature_tree)
+
+        crawford_table = self.get_data_path('crawford.biom')
+        self.crawford_table = Artifact.import_data('FeatureTable[Frequency]',
+                                                   crawford_table)
+        crawford_tree = self.get_data_path('crawford.nwk')
+        self.crawford_tree = Artifact.import_data('Phylogeny[Rooted]',
+                                                  crawford_tree)
+
         t = Table(np.array([[0, 1, 3], [1, 1, 2]]),
                   ['O1', 'O2'],
                   ['S1', 'S2', 'S3'])
-        actual = beta(table=t, metric='braycurtis')
+        self.t = Artifact.import_data('FeatureTable[Frequency]', t)
+        tree = skbio.TreeNode.read(io.StringIO(
+            '((O1:0.25, O2:0.50):0.25, O3:0.75)root;'))
+        self.tree = Artifact.import_data('Phylogeny[Rooted]', tree)
+
+    def test_beta(self):
+        actual = self.beta(table=self.t, metric='braycurtis')
+        actual = actual[0].view(skbio.DistanceMatrix)
         # expected computed with scipy.spatial.distance.braycurtis
         expected = skbio.DistanceMatrix([[0.0000000, 0.3333333, 0.6666667],
                                          [0.3333333, 0.0000000, 0.4285714],
@@ -47,43 +74,11 @@ class BetaDiversityTests(TestPluginBase):
             for id2 in actual.ids:
                 npt.assert_almost_equal(actual[id1, id2], expected[id1, id2])
 
-    def test_beta_canberra_adkins(self):
-        t = Table(np.array([[0, 0], [0, 1], [1, 2]]),
-                  ['O1', 'O2', 'O3'],
-                  ['S1', 'S2'])
-        d = (1. / 2.) * sum([abs(0. - 1.) / (0. + 1.),
-                             abs(1. - 2.) / (1. + 2.)])
-        expected = skbio.DistanceMatrix(np.array([[0.0, d], [d, 0.0]]),
-                                        ids=['S1', 'S2'])
-        actual = beta(table=t, metric='canberra_adkins')
-
-        self.assertEqual(actual.ids, expected.ids)
-        for id1 in actual.ids:
-            for id2 in actual.ids:
-                npt.assert_almost_equal(actual[id1, id2], expected[id1, id2])
-
-    def test_beta_jensenshannon(self):
-        t = Table(np.array([[0, 1, 3], [1, 1, 2]]),
-                  ['O1', 'O2'],
-                  ['S1', 'S2', 'S3'])
-        actual = beta(table=t, metric='jensenshannon')
-        # expected computed with scipy.spatial.distance.jensenshannon
-        expected = skbio.DistanceMatrix([[0.0000000, 0.4645014, 0.52379239],
-                                         [0.4645014, 0.0000000, 0.07112939],
-                                         [0.52379239, 0.07112939, 0.0000000]],
-                                        ids=['S1', 'S2', 'S3'])
-
-        self.assertEqual(actual.ids, expected.ids)
-        for id1 in actual.ids:
-            for id2 in actual.ids:
-                npt.assert_almost_equal(actual[id1, id2], expected[id1, id2])
-
     def test_parallel_beta(self):
-        t = Table(np.array([[0, 1, 3], [1, 1, 2]]),
-                  ['O1', 'O2'],
-                  ['S1', 'S2', 'S3'])
-        parallel = beta(table=t, metric='braycurtis', n_jobs=-1)
-        single_thread = beta(table=t, metric='braycurtis', n_jobs=1)
+        parallel = self.beta(table=self.t, metric='braycurtis', n_jobs='auto')
+        parallel = parallel[0].view(skbio.DistanceMatrix)
+        single_thread = self.beta(table=self.t, metric='braycurtis', n_jobs=1)
+        single_thread = single_thread[0].view(skbio.DistanceMatrix)
         # expected computed with scipy.spatial.distance.braycurtis
         expected = skbio.DistanceMatrix([[0.0000000, 0.3333333, 0.6666667],
                                          [0.3333333, 0.0000000, 0.4285714],
@@ -101,36 +96,38 @@ class BetaDiversityTests(TestPluginBase):
                                         expected[id1, id2])
 
     def test_beta_phylo_metric(self):
-        t = Table(np.array([[0, 1, 3], [1, 1, 2]]),
-                  ['O1', 'O2'],
-                  ['S1', 'S2', 'S3'])
-        with self.assertRaises(ValueError):
-            beta(table=t, metric='unweighted_unifrac')
+        with self.assertRaisesRegex(TypeError,
+                                    'received \'unweighted_unifrac\''):
+            self.beta(table=self.t, metric='unweighted_unifrac')
 
     def test_beta_unknown_metric(self):
-        t = Table(np.array([[0, 1, 3], [1, 1, 2]]),
-                  ['O1', 'O2'],
-                  ['S1', 'S2', 'S3'])
-        with self.assertRaises(ValueError):
-            beta(table=t, metric='not-a-metric')
+        with self.assertRaisesRegex(TypeError,
+                                    'received \'not-a-metric\''):
+            self.beta(table=self.t, metric='not-a-metric')
 
     def test_beta_empty_table(self):
         t = Table(np.array([]), [], [])
-
+        t = Artifact.import_data('FeatureTable[Frequency]', t)
         with self.assertRaisesRegex(ValueError, 'empty'):
-            beta(table=t, metric='braycurtis')
+            self.beta(table=t, metric='braycurtis')
 
     def test_beta_phylogenetic(self):
-        t = self.get_data_path('two_feature_table.biom')
-        tree = self.get_data_path('three_feature.tree')
-        actual = beta_phylogenetic(
+        t = self.two_feature_table
+        tree = self.three_feature_tree
+        actual = self.beta_phylogenetic(
             table=t, phylogeny=tree, metric='unweighted_unifrac')
+
+        self.assertEqual(len(actual), 1)
+
+        self.assertEqual(repr(actual.distance_matrix.type), 'DistanceMatrix')
+
         # expected computed with skbio.diversity.beta_diversity
         expected = skbio.DistanceMatrix([[0.00, 0.25, 0.25],
                                          [0.25, 0.00, 0.00],
                                          [0.25, 0.00, 0.00]],
                                         ids=['S1', 'S2', 'S3'])
 
+        actual = actual[0].view(skbio.DistanceMatrix)
         self.assertEqual(actual.ids, expected.ids)
         for id1 in actual.ids:
             for id2 in actual.ids:
@@ -140,45 +137,40 @@ class BetaDiversityTests(TestPluginBase):
         t = Table(np.array([[0, 1, 3], [1, 1, 2]]),
                   ['O1', 'O2'],
                   ['S1', 'S2', 'S3'])
+        t = Artifact.import_data('FeatureTable[Frequency]', t)
         tree = skbio.TreeNode.read(io.StringIO(
             '((O1:0.25, O2:0.50):0.25, O3:0.75)root;'))
-        with self.assertRaises(ValueError):
-            beta_phylogenetic(table=t, phylogeny=tree, metric='braycurtis')
+        tree = Artifact.import_data('Phylogeny[Rooted]', tree)
+        with self.assertRaisesRegex(TypeError, 'received \'braycurtis'):
+            self.beta_phylogenetic(table=t, phylogeny=tree,
+                                   metric='braycurtis')
 
     def test_beta_phylogenetic_unknown_metric(self):
         t = Table(np.array([[0, 1, 3], [1, 1, 2]]),
                   ['O1', 'O2'],
                   ['S1', 'S2', 'S3'])
+        t = Artifact.import_data('FeatureTable[Frequency]', t)
         tree = skbio.TreeNode.read(io.StringIO(
             '((O1:0.25, O2:0.50):0.25, O3:0.75)root;'))
-        with self.assertRaises(ValueError):
-            beta_phylogenetic(table=t, phylogeny=tree, metric='not-a-metric')
+        tree = Artifact.import_data('Phylogeny[Rooted]', tree)
+        with self.assertRaisesRegex(TypeError, 'received \'not-a-metric\''):
+            self.beta_phylogenetic(table=t, phylogeny=tree,
+                                   metric='not-a-metric')
 
     def test_beta_phylogenetic_empty_table(self):
         t = self.get_data_path('empty.biom')
+        t = Artifact.import_data('FeatureTable[Frequency]', t)
         tree = self.get_data_path('three_feature.tree')
+        tree = Artifact.import_data('Phylogeny[Rooted]', tree)
 
         with self.assertRaisesRegex(ValueError, 'empty'):
-            beta_phylogenetic(table=t, phylogeny=tree,
-                              metric='unweighted_unifrac')
-
-    def test_beta_phylogenetic_skbio_error_rewriting(self):
-        t = self.get_data_path('two_feature_table.biom')
-        tree = self.get_data_path('vaw.nwk')
-        # Verify through regex that there is a ``feature_ids`` substring
-        # followed by a ``phylogeny``
-        with self.assertRaisesRegex(ValueError,
-                                    'represented by the phylogeny'):
-            beta_phylogenetic(table=t, phylogeny=tree,
-                              metric='weighted_unifrac')
+            self.beta_phylogenetic(table=t, phylogeny=tree,
+                                   metric='unweighted_unifrac')
 
     def test_beta_unweighted(self):
-        bt_fp = self.get_data_path('crawford.biom')
-        tree_fp = self.get_data_path('crawford.nwk')
-
-        actual = beta_phylogenetic(table=bt_fp,
-                                   phylogeny=tree_fp,
-                                   metric='unweighted_unifrac')
+        actual = self.beta_phylogenetic(table=self.crawford_table,
+                                        phylogeny=self.crawford_tree,
+                                        metric='unweighted_unifrac')
 
         # computed with beta-phylogenetic
         data = np.array([0.71836067, 0.71317361, 0.69746044, 0.62587207,
@@ -194,6 +186,10 @@ class BetaDiversityTests(TestPluginBase):
                '10084.PC.354', '10084.PC.636', '10084.PC.635', '10084.PC.607',
                '10084.PC.634')
         expected = skbio.DistanceMatrix(data, ids=ids)
+
+        self.assertEqual(len(actual), 1)
+        self.assertEqual(repr(actual.distance_matrix.type), 'DistanceMatrix')
+        actual = actual[0].view(skbio.DistanceMatrix)
 
         self.assertEqual(actual.ids, expected.ids)
         for id1 in actual.ids:
@@ -202,12 +198,14 @@ class BetaDiversityTests(TestPluginBase):
 
     def test_beta_unweighted_parallel(self):
         bt_fp = self.get_data_path('crawford.biom')
+        bt = Artifact.import_data('FeatureTable[Frequency]', bt_fp)
         tree_fp = self.get_data_path('crawford.nwk')
+        tree = Artifact.import_data('Phylogeny[Rooted]', tree_fp)
 
-        actual = beta_phylogenetic(table=bt_fp,
-                                   phylogeny=tree_fp,
-                                   metric='unweighted_unifrac',
-                                   n_jobs=2)
+        actual = self.beta_phylogenetic(table=bt,
+                                        phylogeny=tree,
+                                        metric='unweighted_unifrac',
+                                        threads=2)
 
         # computed with beta-phylogenetic
         data = np.array([0.71836067, 0.71317361, 0.69746044, 0.62587207,
@@ -224,18 +222,19 @@ class BetaDiversityTests(TestPluginBase):
                '10084.PC.634')
         expected = skbio.DistanceMatrix(data, ids=ids)
 
+        self.assertEqual(len(actual), 1)
+        self.assertEqual(repr(actual.distance_matrix.type), 'DistanceMatrix')
+        actual = actual[0].view(skbio.DistanceMatrix)
+
         self.assertEqual(actual.ids, expected.ids)
         for id1 in actual.ids:
             for id2 in actual.ids:
                 npt.assert_almost_equal(actual[id1, id2], expected[id1, id2])
 
     def test_beta_weighted(self):
-        bt_fp = self.get_data_path('crawford.biom')
-        tree_fp = self.get_data_path('crawford.nwk')
-
-        actual = beta_phylogenetic(table=bt_fp,
-                                   phylogeny=tree_fp,
-                                   metric='weighted_unifrac')
+        actual = self.beta_phylogenetic(table=self.crawford_table,
+                                        phylogeny=self.crawford_tree,
+                                        metric='weighted_unifrac')
 
         # computed with beta-phylogenetic (weighted_unifrac)
         data = np.array([0.44656238, 0.23771096, 0.30489123, 0.23446002,
@@ -252,6 +251,10 @@ class BetaDiversityTests(TestPluginBase):
                '10084.PC.634')
         expected = skbio.DistanceMatrix(data, ids=ids)
 
+        self.assertEqual(len(actual), 1)
+        self.assertEqual(repr(actual.distance_matrix.type), 'DistanceMatrix')
+        actual = actual[0].view(skbio.DistanceMatrix)
+
         self.assertEqual(actual.ids, expected.ids)
         for id1 in actual.ids:
             for id2 in actual.ids:
@@ -259,12 +262,14 @@ class BetaDiversityTests(TestPluginBase):
 
     def test_variance_adjusted_normalized(self):
         bt_fp = self.get_data_path('vaw.biom')
+        bt = Artifact.import_data('FeatureTable[Frequency]', bt_fp)
         tree_fp = self.get_data_path('vaw.nwk')
+        tree = Artifact.import_data('Phylogeny[Rooted]', tree_fp)
 
-        actual = beta_phylogenetic(table=bt_fp,
-                                   phylogeny=tree_fp,
-                                   metric='weighted_normalized_unifrac',
-                                   variance_adjusted=True)
+        actual = self.beta_phylogenetic(table=bt,
+                                        phylogeny=tree,
+                                        metric='weighted_normalized_unifrac',
+                                        variance_adjusted=True)
 
         data = np.array([[0.0000000, 0.4086040, 0.6240185, 0.4639481,
                           0.2857143, 0.2766318],
@@ -282,6 +287,10 @@ class BetaDiversityTests(TestPluginBase):
                'Sample6')
         expected = skbio.DistanceMatrix(data, ids=ids)
 
+        self.assertEqual(len(actual), 1)
+        self.assertEqual(repr(actual.distance_matrix.type), 'DistanceMatrix')
+        actual = actual[0].view(skbio.DistanceMatrix)
+
         self.assertEqual(actual.ids, expected.ids)
         for id1 in actual.ids:
             for id2 in actual.ids:
@@ -289,12 +298,14 @@ class BetaDiversityTests(TestPluginBase):
 
     def test_generalized_unifrac(self):
         bt_fp = self.get_data_path('vaw.biom')
+        bt = Artifact.import_data('FeatureTable[Frequency]', bt_fp)
         tree_fp = self.get_data_path('vaw.nwk')
+        tree = Artifact.import_data('Phylogeny[Rooted]', tree_fp)
 
-        actual = beta_phylogenetic(table=bt_fp,
-                                   phylogeny=tree_fp,
-                                   metric='generalized_unifrac',
-                                   alpha=0.5)
+        actual = self.beta_phylogenetic(table=bt,
+                                        phylogeny=tree,
+                                        metric='generalized_unifrac',
+                                        alpha=0.5)
 
         data = np.array([[0.0000000, 0.4040518, 0.6285560, 0.5869439,
                           0.4082483, 0.2995673],
@@ -312,19 +323,20 @@ class BetaDiversityTests(TestPluginBase):
                'Sample6')
         expected = skbio.DistanceMatrix(data, ids=ids)
 
+        self.assertEqual(len(actual), 1)
+        self.assertEqual(repr(actual.distance_matrix.type), 'DistanceMatrix')
+        actual = actual[0].view(skbio.DistanceMatrix)
+
         self.assertEqual(actual.ids, expected.ids)
         for id1 in actual.ids:
             for id2 in actual.ids:
                 npt.assert_almost_equal(actual[id1, id2], expected[id1, id2])
 
     def test_generalized_unifrac_no_alpha(self):
-        bt_fp = self.get_data_path('crawford.biom')
-        tree_fp = self.get_data_path('crawford.nwk')
-
-        actual = beta_phylogenetic(table=bt_fp,
-                                   phylogeny=tree_fp,
-                                   metric='generalized_unifrac',
-                                   alpha=None)
+        actual = self.beta_phylogenetic(table=self.crawford_table,
+                                        phylogeny=self.crawford_tree,
+                                        metric='generalized_unifrac',
+                                        alpha=None)
 
         # alpha=1 should be equal to weighted normalized UniFrac
         data = np.array([0.2821874, 0.16148405, 0.20186143, 0.1634832,
@@ -341,34 +353,34 @@ class BetaDiversityTests(TestPluginBase):
                '10084.PC.634')
         expected = skbio.DistanceMatrix(data, ids=ids)
 
+        self.assertEqual(len(actual), 1)
+        self.assertEqual(repr(actual.distance_matrix.type), 'DistanceMatrix')
+        actual = actual[0].view(skbio.DistanceMatrix)
+
         self.assertEqual(actual.ids, expected.ids)
         for id1 in actual.ids:
             for id2 in actual.ids:
                 npt.assert_almost_equal(actual[id1, id2], expected[id1, id2])
 
-    def test_beta_phylogenetic_alpha_on_non_generalized(self):
-        bt_fp = self.get_data_path('crawford.biom')
-        tree_fp = self.get_data_path('tree.nwk')
-
-        with self.assertRaisesRegex(ValueError, 'The alpha parameter is only '
-                                    'allowed when the choice of metric is '
-                                    'generalized_unifrac'):
-            beta_phylogenetic(table=bt_fp, phylogeny=tree_fp,
-                              metric='unweighted_unifrac',
-                              alpha=0.11)
+    def test_not_generalized_passed_alpha(self):
+        with self.assertRaisesRegex(ValueError,
+                                    "alpha.*only allowed.*when.*generalized"):
+            self.beta_phylogenetic(table=self.crawford_table,
+                                   phylogeny=self.crawford_tree,
+                                   metric='unweighted_unifrac',
+                                   alpha=0.5)
 
     def test_beta_phylogenetic_too_many_jobs(self):
-        bt_fp = self.get_data_path('crawford.biom')
-        tree_fp = self.get_data_path('tree.nwk')
-
         with self.assertRaises(ValueError):
             # cannot guarantee that this will always be true, but it would be
             # odd to see a machine with these many CPUs
-            beta_phylogenetic(table=bt_fp, phylogeny=tree_fp,
-                              metric='unweighted_unifrac', n_jobs=11117)
+            self.beta_phylogenetic(table=self.crawford_table,
+                                   phylogeny=self.crawford_tree,
+                                   metric='unweighted_unifrac', threads=11117)
 
 
-class BioenvTests(unittest.TestCase):
+class BioenvTests(TestPluginBase):
+    package = 'q2_diversity.tests'
 
     def test_bioenv(self):
         dm = skbio.DistanceMatrix([[0.00, 0.25, 0.25],
@@ -452,21 +464,6 @@ class BioenvTests(unittest.TestCase):
             self.assertTrue('<strong>metadata2' in open(index_fp).read())
 
             self.assertFalse('Warning' in open(index_fp).read())
-
-    def test_aitchison(self):
-        t = Table(np.array([[0, 1, 3], [1, 1, 2]]),
-                  ['O1', 'O2'],
-                  ['S1', 'S2', 'S3'])
-        actual = beta(table=t, metric='aitchison')
-        expected = skbio.DistanceMatrix([[0.0000000, 0.4901290, 0.6935510],
-                                         [0.4901290, 0.0000000, 0.2034219],
-                                         [0.6935510, 0.2034219, 0.0000000]],
-                                        ids=['S1', 'S2', 'S3'])
-
-        self.assertEqual(actual.ids, expected.ids)
-        for id1 in actual.ids:
-            for id2 in actual.ids:
-                npt.assert_almost_equal(actual[id1, id2], expected[id1, id2])
 
 
 class BetaGroupSignificanceTests(unittest.TestCase):

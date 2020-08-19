@@ -21,14 +21,9 @@ from statsmodels.sandbox.stats.multicomp import multipletests
 import q2templates
 import biom
 import itertools
-from q2_feature_table import rarefy
-from q2_types.feature_table import BIOMV210Format
-from qiime2.plugin.util import transform
+
+from . import METRICS
 from q2_types.tree import NewickFormat
-
-from ._method import (non_phylogenetic_metrics, phylogenetic_metrics,
-                      alpha, alpha_phylogenetic)
-
 
 TEMPLATES = pkg_resources.resource_filename('q2_diversity', '_alpha')
 
@@ -292,20 +287,31 @@ def _compute_rarefaction_data(feature_table, min_depth, max_depth, steps,
     data = {k: pd.DataFrame(np.NaN, index=rows, columns=cols)
             for k in metrics}
 
-    for d, i in itertools.product(depth_range, iter_range):
-        rt = rarefy(feature_table, d)
-        for m in metrics:
-            if m in phylogenetic_metrics():
-                # need a new rarefied table here in case a phylogenetic
-                # metric comes before a non-phylogenetic metric
-                rt_p = transform(rt, to_type=BIOMV210Format,
-                                 from_type=biom.Table)
-                vector = alpha_phylogenetic(table=rt_p, metric=m,
-                                            phylogeny=phylogeny)
-            else:
-                vector = alpha(table=rt, metric=m)
-            data[m][(d, i)] = vector
-    return data
+    with qiime2.sdk.Context() as scope:
+        feature_table = scope.ctx.make_artifact(
+                'FeatureTable[Frequency]', feature_table)
+
+        if phylogeny:
+            phylogeny = scope.ctx.make_artifact('Phylogeny[Rooted]', phylogeny)
+
+        for depth, i in itertools.product(depth_range, iter_range):
+            rarefy_method = scope.ctx.get_action('feature_table', 'rarefy')
+            rt, = rarefy_method(feature_table, depth)
+
+            for metric in metrics:
+                if metric in (METRICS['PHYLO']['IMPL'] |
+                              METRICS['PHYLO']['UNIMPL']):
+                    alpha_phylo = scope.ctx.get_action('diversity',
+                                                       'alpha_phylogenetic')
+                    vector, = alpha_phylo(table=rt, metric=metric,
+                                          phylogeny=phylogeny)
+                else:
+                    alpha = scope.ctx.get_action('diversity', 'alpha')
+                    vector, = alpha(table=rt, metric=metric)
+
+                vector = vector.view(pd.Series)
+                data[metric][(depth, i)] = vector
+        return data
 
 
 def alpha_rarefaction(output_dir: str, table: biom.Table, max_depth: int,
@@ -314,13 +320,15 @@ def alpha_rarefaction(output_dir: str, table: biom.Table, max_depth: int,
                       steps: int = 10, iterations: int = 10) -> None:
 
     if metrics is None:
-        metrics = {'observed_otus', 'shannon'}
+        metrics = {'observed_features', 'shannon'}
         if phylogeny is not None:
             metrics.add('faith_pd')
     elif not metrics:
         raise ValueError('`metrics` was given an empty set.')
     else:
-        phylo_overlap = phylogenetic_metrics() & metrics
+        phylo_overlap = ((METRICS['PHYLO']['IMPL'] |
+                          METRICS['PHYLO']['UNIMPL']) &
+                         metrics)
         if phylo_overlap and phylogeny is None:
             raise ValueError('Phylogenetic metric %s was requested but '
                              'phylogeny was not provided.' % phylo_overlap)
@@ -412,8 +420,6 @@ def alpha_rarefaction(output_dir: str, table: biom.Table, max_depth: int,
                     os.path.join(output_dir, 'dist'))
 
 
-alpha_rarefaction_supported_metrics = ((non_phylogenetic_metrics()
-                                       | phylogenetic_metrics())
-                                       - {'osd', 'lladser_ci', 'strong',
-                                          'esty_ci', 'kempton_taylor_q',
-                                          'chao1_ci'})
+alpha_rarefaction_unsupported_metrics = {'osd', 'lladser_ci', 'strong',
+                                         'esty_ci', 'kempton_taylor_q',
+                                         'chao1_ci'}

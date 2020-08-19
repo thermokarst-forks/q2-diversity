@@ -6,16 +6,16 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 
+from q2_diversity_lib.alpha import METRICS
 
-from ._method import (alpha, alpha_phylogenetic, alpha_phylogenetic_alt,
-                      alpha_phylogenetic_old,
-                      phylogenetic_metrics, non_phylogenetic_metrics)
+from ._pipeline import alpha, alpha_phylogenetic
 from ._visualizer import (alpha_group_significance, alpha_correlation,
                           alpha_rarefaction,
-                          alpha_rarefaction_supported_metrics)
+                          alpha_rarefaction_unsupported_metrics)
 
-__all__ = ['alpha', 'alpha_phylogenetic', 'alpha_phylogenetic_alt',
-           'alpha_phylogenetic_old',
-           'alpha_group_significance', 'phylogenetic_metrics',
-           'non_phylogenetic_metrics', 'alpha_correlation',
-           'alpha_rarefaction', 'alpha_rarefaction_supported_metrics']
+
+__all__ = [
+    'alpha', 'alpha_phylogenetic', 'alpha_group_significance',
+    'alpha_correlation', 'alpha_rarefaction', 'METRICS',
+    'alpha_rarefaction_unsupported_metrics',
+]

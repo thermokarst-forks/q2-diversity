@@ -13,7 +13,8 @@ from qiime2.plugin import (Plugin, Str, Properties, Choices, Int, Bool, Range,
 import q2_diversity
 from q2_diversity import _alpha as alpha
 from q2_diversity import _beta as beta
-from q2_types.feature_table import FeatureTable, Frequency, RelativeFrequency
+from q2_types.feature_table import (FeatureTable, Frequency, RelativeFrequency,
+                                    PresenceAbsence)
 from q2_types.distance_matrix import DistanceMatrix
 from q2_types.sample_data import AlphaDiversity, SampleData
 from q2_types.tree import Phylogeny, Rooted
@@ -21,19 +22,17 @@ from q2_types.ordination import PCoAResults
 
 citations = Citations.load('citations.bib', package='q2_diversity')
 
-sklearn_n_jobs_description = (
-    'The number of jobs to use for the computation. This works by breaking '
-    'down the pairwise matrix into n_jobs even slices and computing them in '
-    'parallel. If -1 all CPUs are used. If 1 is given, no parallel computing '
-    'code is used at all, which is useful for debugging. For n_jobs below -1, '
-    '(n_cpus + 1 + n_jobs) are used. Thus for n_jobs = -2, all CPUs but one '
-    'are used. (Description from sklearn.metrics.pairwise_distances)'
-)
-
 n_jobs_description = (
     'The number of concurrent jobs to use in performing this calculation. '
     'May not exceed the number of available physical cores. If n_jobs = '
     '\'auto\', one job will be launched for each identified CPU core on the '
+    'host.'
+)
+
+threads_description = (
+    'The number of CPU threads to use in performing this calculation. '
+    'May not exceed the number of available physical cores. If threads = '
+    '\'auto\', one thread will be created for each identified CPU core on the '
     'host.'
 )
 
@@ -58,16 +57,18 @@ plugin = Plugin(
 )
 
 
-plugin.methods.register_function(
+plugin.pipelines.register_function(
     function=q2_diversity.beta_phylogenetic,
-    inputs={'table': FeatureTable[Frequency],
+    inputs={'table':
+            FeatureTable[Frequency | RelativeFrequency | PresenceAbsence],
             'phylogeny': Phylogeny[Rooted]},
-    parameters={'metric': Str % Choices(beta.phylogenetic_metrics()),
-                'n_jobs': Int,
+    parameters={'metric': Str % Choices(beta.METRICS['PHYLO']['IMPL'] |
+                                        beta.METRICS['PHYLO']['UNIMPL']),
+                'threads': Int % Range(1, None) | Str % Choices(['auto']),
                 'variance_adjusted': Bool,
                 'alpha': Float % Range(0, 1, inclusive_end=True),
                 'bypass_tips': Bool},
-    outputs=[('distance_matrix', DistanceMatrix % Properties('phylogenetic'))],
+    outputs=[('distance_matrix', DistanceMatrix)],
     input_descriptions={
         'table': ('The feature table containing the samples over which beta '
                   'diversity should be computed.'),
@@ -79,7 +80,7 @@ plugin.methods.register_function(
     },
     parameter_descriptions={
         'metric': 'The beta diversity metric to be computed.',
-        'n_jobs': 'The number of workers to use.',
+        'threads': threads_description,
         'variance_adjusted': ('Perform variance adjustment based on Chang et '
                               'al. BMC Bioinformatics 2011. Weights distances '
                               'based on the proportion of the relative '
@@ -99,21 +100,17 @@ plugin.methods.register_function(
     output_descriptions={'distance_matrix': 'The resulting distance matrix.'},
     name='Beta diversity (phylogenetic)',
     description=("Computes a user-specified phylogenetic beta diversity metric"
-                 " for all pairs of samples in a feature table."),
-    citations=[
-        citations['lozupone2005unifrac'],
-        citations['lozupone2007quantitative'],
-        citations['chang2011variance'],
-        citations['chen2012associating'],
-        citations['mcdonald2018unifrac']]
+                 " for all pairs of samples in a feature table.")
 )
 
-plugin.methods.register_function(
+plugin.pipelines.register_function(
     function=q2_diversity.beta,
-    inputs={'table': FeatureTable[Frequency]},
-    parameters={'metric': Str % Choices(beta.non_phylogenetic_metrics()),
+    inputs={'table':
+            FeatureTable[Frequency | RelativeFrequency | PresenceAbsence]},
+    parameters={'metric': Str % Choices(beta.METRICS['NONPHYLO']['IMPL'] |
+                                        beta.METRICS['NONPHYLO']['UNIMPL']),
                 'pseudocount': Int % Range(1, None),
-                'n_jobs': Int},
+                'n_jobs': Int % Range(1, None) | Str % Choices(['auto'])},
     outputs=[('distance_matrix', DistanceMatrix)],
     input_descriptions={
         'table': ('The feature table containing the samples over which beta '
@@ -123,23 +120,23 @@ plugin.methods.register_function(
         'metric': 'The beta diversity metric to be computed.',
         'pseudocount': ('A pseudocount to handle zeros for compositional '
                         'metrics.  This is ignored for other metrics.'),
-        'n_jobs': sklearn_n_jobs_description
+        'n_jobs': n_jobs_description
     },
     output_descriptions={'distance_matrix': 'The resulting distance matrix.'},
     name='Beta diversity',
     description=("Computes a user-specified beta diversity metric for all "
-                 "pairs of samples in a feature table."),
-    citations=[
-        citations['Faith1987']]
+                 "pairs of samples in a feature table.")
 )
 
-plugin.methods.register_function(
+plugin.pipelines.register_function(
     function=q2_diversity.alpha_phylogenetic,
-    inputs={'table': FeatureTable[Frequency],
+    inputs={'table':
+            FeatureTable[Frequency | RelativeFrequency | PresenceAbsence],
             'phylogeny': Phylogeny[Rooted]},
-    parameters={'metric': Str % Choices(alpha.phylogenetic_metrics())},
+    parameters={'metric': Str % Choices(alpha.METRICS['PHYLO']['IMPL'] |
+                                        alpha.METRICS['PHYLO']['UNIMPL'])},
     outputs=[('alpha_diversity',
-              SampleData[AlphaDiversity] % Properties('phylogenetic'))],
+              SampleData[AlphaDiversity])],
     input_descriptions={
         'table': ('The feature table containing the samples for which alpha '
                   'diversity should be computed.'),
@@ -156,101 +153,30 @@ plugin.methods.register_function(
         'alpha_diversity': 'Vector containing per-sample alpha diversities.'
     },
     name='Alpha diversity (phylogenetic)',
-    description=("Computes a user-specified phylogenetic alpha diversity "
-                 "metric for all samples in a feature table. This "
-                 "implementation is recommended for large datasets, otherwise "
-                 "the results are identical to alpha_phylogenetic. \n\n"
-                 "This method is an implementation of the Stacked Faith "
-                 "Algorithm (manuscript in preparation)."),
-    citations=[
-        citations['faith1992conservation']]
+    description=('Computes a user-specified phylogenetic alpha diversity '
+                 'metric for all samples in a feature table.'),
 )
 
 
-plugin.methods.register_function(
-    function=q2_diversity.alpha_phylogenetic_alt,
-    inputs={'table': FeatureTable[Frequency],
-            'phylogeny': Phylogeny[Rooted]},
-    parameters={'metric': Str % Choices(alpha.phylogenetic_metrics())},
-    outputs=[('alpha_diversity',
-              SampleData[AlphaDiversity] % Properties('phylogenetic'))],
-    input_descriptions={
-        'table': ('The feature table containing the samples for which alpha '
-                  'diversity should be computed.'),
-        'phylogeny': ('Phylogenetic tree containing tip identifiers that '
-                      'correspond to the feature identifiers in the table. '
-                      'This tree can contain tip ids that are not present in '
-                      'the table, but all feature ids in the table must be '
-                      'present in this tree.')
-    },
-    parameter_descriptions={
-        'metric': 'The alpha diversity metric to be computed.'
-    },
-    output_descriptions={
-        'alpha_diversity': 'Vector containing per-sample alpha diversities.'
-    },
-    name='Alpha diversity (phylogenetic) - alternative implementation',
-    description=("Computes a user-specified phylogenetic alpha diversity "
-                 "metric for all samples in a feature table. This "
-                 "implementation is recommended for large datasets, otherwise "
-                 "the results are identical to alpha_phylogenetic. \n\n"
-                 "This method is an implementation of the Stacked Faith "
-                 "Algorithm (manuscript in preparation)."),
-    citations=[
-        citations['faith1992conservation']],
-    deprecated=True,
-)
-
-
-plugin.methods.register_function(
-    function=q2_diversity.alpha_phylogenetic_old,
-    inputs={'table': FeatureTable[Frequency],
-            'phylogeny': Phylogeny[Rooted]},
-    parameters={'metric': Str % Choices(alpha.phylogenetic_metrics())},
-    outputs=[('alpha_diversity',
-              SampleData[AlphaDiversity] % Properties('phylogenetic'))],
-    input_descriptions={
-        'table': ('The feature table containing the samples for which alpha '
-                  'diversity should be computed.'),
-        'phylogeny': ('Phylogenetic tree containing tip identifiers that '
-                      'correspond to the feature identifiers in the table. '
-                      'This tree can contain tip ids that are not present in '
-                      'the table, but all feature ids in the table must be '
-                      'present in this tree.')
-    },
-    parameter_descriptions={
-        'metric': 'The alpha diversity metric to be computed.'
-    },
-    output_descriptions={
-        'alpha_diversity': 'Vector containing per-sample alpha diversities.'
-    },
-    name='Alpha diversity (phylogenetic)',
-    description=("Computes a user-specified phylogenetic alpha diversity "
-                 "metric for all samples in a feature table."),
-    citations=[
-        citations['faith1992conservation']],
-    deprecated=True,
-)
-
-
-plugin.methods.register_function(
+plugin.pipelines.register_function(
     function=q2_diversity.alpha,
-    inputs={'table': FeatureTable[Frequency]},
-    parameters={'metric': Str % Choices(alpha.non_phylogenetic_metrics())},
+    inputs={'table':
+            FeatureTable[Frequency | RelativeFrequency | PresenceAbsence]},
+    parameters={'metric': Str % Choices(alpha.METRICS['NONPHYLO']['IMPL'] |
+                                        alpha.METRICS['NONPHYLO']['UNIMPL'])},
     outputs=[('alpha_diversity', SampleData[AlphaDiversity])],
     input_descriptions={
         'table': ('The feature table containing the samples for which alpha '
                   'diversity should be computed.')
     },
     parameter_descriptions={
-        'metric': 'The alpha diversity metric to be computed.'
-    },
+        'metric': 'The alpha diversity metric to be computed.'},
     output_descriptions={
         'alpha_diversity': 'Vector containing per-sample alpha diversities.'
     },
     name='Alpha diversity',
-    description=("Computes a user-specified alpha diversity metric for all "
-                 "samples in a feature table.")
+    description=('Computes a user-specified alpha diversity metric for all '
+                 'samples in a feature table.')
 )
 
 plugin.methods.register_function(
@@ -708,7 +634,11 @@ plugin.visualizers.register_function(
     citations=[citations['pearson1895note'], citations['spearman1904proof']]
 )
 
-_metric_set = Set[Str % Choices(alpha.alpha_rarefaction_supported_metrics)]
+_metric_set = Set[Str % Choices((alpha.METRICS['PHYLO']['IMPL'] |
+                                 alpha.METRICS['PHYLO']['UNIMPL'] |
+                                 alpha.METRICS['NONPHYLO']['IMPL'] |
+                                 alpha.METRICS['NONPHYLO']['UNIMPL']) -
+                                alpha.alpha_rarefaction_unsupported_metrics)]
 plugin.visualizers.register_function(
     function=q2_diversity.alpha_rarefaction,
     inputs={'table': FeatureTable[Frequency],
@@ -757,7 +687,10 @@ plugin.visualizers.register_function(
         'table': FeatureTable[Frequency],
         'phylogeny': Phylogeny[Rooted]},
     parameters={
-        'metric': Str % Choices(beta.all_metrics()),
+        'metric': Str % Choices(beta.METRICS['NONPHYLO']['IMPL'] |
+                                beta.METRICS['NONPHYLO']['UNIMPL'] |
+                                beta.METRICS['PHYLO']['IMPL'] |
+                                beta.METRICS['PHYLO']['UNIMPL']),
         'clustering_method': Str % Choices({'nj', 'upgma'}),
         'metadata': Metadata,
         'sampling_depth': Int % Range(1, None),

@@ -51,7 +51,6 @@ test:
   imports:
     - q2_diversity
     - qiime2.plugins.diversity
-    - force_the_build_to_fail
 
 about:
   home: https://qiime2.org

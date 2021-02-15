@@ -365,6 +365,10 @@ def adonis(output_dir: str,
         for i in t.factors:
             metadata.get_column(i.name())
 
+    metadata_df = metadata.to_dataframe()
+    if metadata_df.isnull().values.any():
+        raise ValueError("Adonis cannot run with NaNs in metadata.")
+
     # Run adonis
     results_fp = os.path.join(output_dir, 'adonis.tsv')
     with tempfile.TemporaryDirectory() as temp_dir_name:
